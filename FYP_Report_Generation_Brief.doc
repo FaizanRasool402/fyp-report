@@ -1,0 +1,384 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>FYP Report Generation Brief — Chest X-Ray Disease Detection</title>
+<style>
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.45;margin:2cm}
+h1{font-size:18pt;text-align:center}
+h2{font-size:14pt;color:#1a1a1a;border-bottom:1px solid #ccc;margin-top:22pt}
+h3{font-size:12pt;margin-top:14pt}
+h4{font-size:11pt;margin-top:10pt}
+p,li{margin:0 0 8pt 0;text-align:justify}
+table{border-collapse:collapse;width:100%;margin:10pt 0;font-size:10pt}
+th,td{border:1px solid #333;padding:6pt}
+th{background:#eee}
+.box{background:#f5f5f5;border:1px solid #ccc;padding:10pt;margin:12pt 0}
+.prompt{background:#eef6ff;border:1px solid #99b;padding:12pt;margin:12pt 0;white-space:pre-wrap;font-family:Consolas,monospace;font-size:9.5pt}
+.fill{color:#a00;font-weight:bold}
+code{font-family:Consolas,monospace;font-size:9.5pt}
+</style>
+</head>
+<body>
+
+<h1>FYP REPORT GENERATION BRIEF<br>
+Chest X-Ray Disease Detection System<br>
+(Complete Headings Map + Project Facts + Master Prompt)</h1>
+
+<p><strong>Purpose of this document:</strong> Give this entire file to Cursor / another writing agent so it can generate a full Final Year Project report matching the required heading structure. All content below is grounded in the actual project (unified 4-class multi-architecture system after the 2026 conversion).</p>
+
+<div class="box">
+<strong>Project title (use consistently):</strong> Chest X-Ray Disease Detection Using Deep Learning: A Unified Four-Class Multi-Architecture Benchmark with Ensemble Web Deployment<br><br>
+<strong>Alternative shorter title:</strong> Multi-Architecture Chest X-Ray Classification for Tuberculosis, COVID-19 and Pneumonia<br><br>
+<strong>Student / University fields:</strong> <span class="fill">[FILL IN: student name, roll no, supervisor, department, university, session]</span>
+</div>
+
+<!-- ===================== MASTER PROMPT ===================== -->
+<h2>MASTER PROMPT (copy this to the agent first)</h2>
+<div class="prompt">You are an academic technical writer. Write a complete Final Year Project (FYP) report in formal academic English (British/American spelling consistent; prefer British if unsure).
+
+Use ONLY the facts in the attached "FYP Report Generation Brief". Do not invent clinical claims, hospital trials, or metric numbers that are not in the brief. Where numbers are missing, write placeholders like [INSERT FROM training/results/comparison.md] and explain what should be inserted.
+
+Tone: third person, past tense for work done ("was developed", "were trained"), present tense for system behaviour. No hype. Always state that the system is a research demonstration on public datasets and NOT a clinical diagnostic device.
+
+Structure: follow the exact heading map in the brief (Front Matter → Chapters 1–6 → Back Matter / Appendices). Expand every heading into proper paragraphs (not bullet-only chapters). Include tables where specified. Suggest figure captions where screenshots/diagrams are needed.
+
+Length target: substantial FYP report (roughly equivalent to 50–70 pages of content if printed). Literature Review should cite real well-known papers/datasets (CheXNet, ImageNet, DenseNet, EfficientNet, RSNA/Kaggle pneumonia, TB datasets) with IEEE-style references; mark uncertain citations as [VERIFY].
+
+At the end of each chapter, write a short Summary subsection if the map requires it.
+
+Output format: clean Word-ready headings (Heading 1/2/3), numbered chapters, tables with captions, and a References list. Leave [FILL IN] for student/university identity pages.</div>
+
+<!-- ===================== PROJECT FACT SHEET ===================== -->
+<h2>PROJECT FACT SHEET (single source of truth)</h2>
+
+<h3>What the system does now</h3>
+<p>A Flask web application that accepts a chest X-ray upload and runs <strong>all available trained models</strong> over the <strong>same four labels</strong>, then shows each model’s probability distribution, an <strong>ensemble verdict</strong> (soft voting / mean probability), and whether the models <strong>agree</strong>.</p>
+
+<p><strong>Locked label space (order matters):</strong> Normal · Tuberculosis · COVID-19 · Pneumonia</p>
+
+<table>
+<tr><th>Architecture</th><th>Initialisation</th><th>Input</th><th>Preprocess</th><th>Weights file</th></tr>
+<tr><td>EfficientNetB3</td><td>ImageNet transfer</td><td>256×256</td><td>EfficientNet preprocess_input</td><td>weights/efficientnetb3_4class.keras</td></tr>
+<tr><td>DenseNet121</td><td>ImageNet transfer</td><td>224×224</td><td>DenseNet preprocess_input</td><td>weights/densenet121_4class.keras</td></tr>
+<tr><td>Custom CNN</td><td>From scratch</td><td>150×150</td><td>/255 rescale</td><td>weights/cnn_4class.keras</td></tr>
+</table>
+
+<h3>Core methodological claims (defendable)</h3>
+<ul>
+<li>Three architectures trained on <strong>one shared manifest</strong> (same data, same patient-grouped splits, same seed, same epoch budget) so comparison is fair.</li>
+<li>Transfer models share an <strong>identical classification head</strong>: GAP → Dropout(0.5) → Dense(256, ReLU) → Dropout(0.3) → Dense(4, Softmax).</li>
+<li>Fine-tune capacity matched by <strong>fraction of weights</strong> (~43%): DenseNet from layer 300; EfficientNet from layer 340. BatchNorm stays frozen in fine-tune.</li>
+<li>No warm-start from old single-disease weights (would bias the benchmark).</li>
+<li>Splits: <strong>patient-grouped</strong>; duplicates removed by <strong>content hash</strong>; Normal &amp; Pneumonia drawn from multiple sources to reduce scanner shortcutting.</li>
+<li>Class imbalance: COVID small (~130 after dedupe); others capped (~400); residual imbalance handled by <strong>inverse-frequency class weights</strong>.</li>
+<li>Evaluation emphasises <strong>per-class precision/recall/F1</strong> and <strong>balanced accuracy</strong>, not headline accuracy alone; plus leakage_probe for source shortcutting.</li>
+<li>Deployment: 3-stage chest X-ray gate; “Analyse anyway” override; train/serve resize aligned (bilinear).</li>
+</ul>
+
+<h3>Historical prior work (separate from 4-class results)</h3>
+<p>Earlier single-disease models: TB EfficientNetB3 (~95.63% test binary), COVID DenseNet121 (~85–95% expected 3-class), Pneumonia custom CNN (test accuracy 92%; Normal P/R/F1 0.90/0.87/0.88; Pneumonia 0.92/0.94/0.93 on 624 images). TB architecture benchmark table (VGG19 best at 99.37% test) is <strong>historical only</strong> and not comparable to 4-class metrics.</p>
+
+<h3>Implementation status note for honesty</h3>
+<p>Code for unified training, evaluation, leakage probe, and multi-model frontend is complete. Final 4-class numeric tables come from <code>training/evaluate.py</code> → <code>training/results/comparison.md</code> after training. Portable inference bundle can ship with pre-trained <code>*_4class.keras</code> weights. Report must distinguish “system designed and implemented” vs “insert final measured metrics after evaluation run”.</p>
+
+<h3>Tech stack</h3>
+<p>Python 3.9+/3.11 recommended for TF 2.16; TensorFlow/Keras; OpenCV; Flask; NumPy; scikit-learn (evaluation); Matplotlib/Seaborn (figures). Key folders: <code>training/</code>, <code>Frontend/</code>, <code>weights/</code>, source datasets under TB / DenseNet121/Covid19-dataset / pneumonia_detection/data.</p>
+
+<!-- ===================== FRONT MATTER ===================== -->
+<h2>FRONT MATTER — what to write under each heading</h2>
+
+<h3>Title Pages (4 pages)</h3>
+<p><span class="fill">[FILL IN]</span> Page 1: Project title, student name, roll number, department, university logo, session/year. Page 2: Supervisor name/designation and approval signature block. Page 3: Degree statement (“submitted in partial fulfilment of the requirements for the degree of …”). Page 4: Certificate / undertaking that work is original. Keep branding formal; no technical content.</p>
+
+<h3>Abstract (~250–350 words)</h3>
+<p>Must cover: (1) problem of multi-disease CXR screening and incomparable single-disease models; (2) unified 4-class task Normal/TB/COVID/Pneumonia; (3) three architectures EfficientNetB3, DenseNet121, Custom CNN on shared manifest; (4) patient-grouped splits, dedupe, class weights; (5) Flask app with multi-model + soft-voting ensemble + X-ray gate; (6) evaluation via per-class metrics and leakage probe; (7) research-only disclaimer. Insert final accuracy/F1 only if available from comparison.md; else omit exact claims.</p>
+
+<h3>Acknowledgement</h3>
+<p>Thank supervisor, department, family/friends, and any open-data providers (Kaggle TB, pneumonia; COVID public set). Keep sincere and short (½–1 page).</p>
+
+<h3>Project in Brief</h3>
+<p>One-page executive summary: goal, 4 classes, 3 models, unified training pipeline, web demo, main contributions (fair architecture benchmark + ensemble CAD demo + honest evaluation design), tools (Python, TF, Flask), and limitation (public small data; not clinical device).</p>
+
+<h3>Table of Contents / List of Figures / List of Tables</h3>
+<p>Auto-generate from Word styles. Suggested figures: system architecture; data merge flow; model head diagram; training two-phase flowchart; X-ray gate stages; UI screenshots (upload, results, rejection); confusion matrices; comparison bar chart. Suggested tables: datasets; hyperparameters; architecture comparison; metrics tables; SDG mapping.</p>
+
+<!-- ===================== CHAPTER 1 ===================== -->
+<h2>CHAPTER 1 — INTRODUCTION</h2>
+
+<h3>Motivation</h3>
+<p>Write about global burden of TB, COVID-19, and pneumonia; role of chest radiography as widely available screening tool; shortage of radiologists in low-resource settings; promise of CNNs/transfer learning; need for tools that handle <strong>multiple</strong> respiratory conditions in one workflow rather than separate siloed apps. Motivate fair comparison of architectures so engineering choices are evidence-based.</p>
+
+<h3>Problem Statement</h3>
+<p>State clearly: Existing student/demo systems often train separate models for separate diseases on incompatible label spaces, preventing fair comparison and preventing a single upload from receiving a multi-disease assessment. Data leakage (patient overlap, duplicates) and train–serve preprocessing mismatch further undermine reported accuracy. <strong>Problem:</strong> Design and implement a reproducible multi-architecture system that classifies chest X-rays into Normal, Tuberculosis, COVID-19, or Pneumonia under shared data/splits, with transparent metrics and a usable web interface including input validation and ensemble aggregation.</p>
+
+<h3>Aim and Objectives</h3>
+<p><strong>Aim:</strong> To develop a research-grade chest X-ray multi-disease classification system that benchmarks three deep learning architectures on a unified four-class dataset and deploys them through an ensemble-capable web application.</p>
+<p><strong>Objectives:</strong></p>
+<ol>
+<li>Merge three public CXR sources into a unified 4-class manifest with deduplication and patient-grouped splits.</li>
+<li>Implement EfficientNetB3, DenseNet121, and a custom CNN with matched training protocol and shared head (transfer models).</li>
+<li>Train and evaluate with per-class precision, recall, F1, balanced accuracy, confusion matrices, and a source-leakage probe.</li>
+<li>Build a Flask application that runs all models per upload, computes soft-voting ensemble, and applies a multi-stage chest X-ray gate.</li>
+<li>Document methodology, limitations, and reproducibility (manifest, seeds, scripts).</li>
+</ol>
+
+<h3>Organization of the Report</h3>
+<p>One short paragraph per remaining chapter: Ch.2 literature; Ch.3 methodology; Ch.4 system design; Ch.5 results/discussion; Ch.6 future/conclusion; appendices (data, models, SDGs).</p>
+
+<!-- ===================== CHAPTER 2 ===================== -->
+<h2>CHAPTER 2 — LITERATURE REVIEW</h2>
+<p>Agent should write a proper review (~8–15 pages equivalent) using the subsection map. Tie each subsection back to this project’s choices.</p>
+
+<h3>Deep Learning in Medical Imaging</h3>
+<p>CNNs for radiology; CAD history; shift from handcrafted features to end-to-end learning; importance of large labelled corpora and transfer learning when medical data are scarce.</p>
+
+<h3>Foundational CNN Architectures</h3>
+<p>Brief evolution: AlexNet → VGG → ResNet → DenseNet (feature reuse) → EfficientNet (compound scaling). Explain why this project selected DenseNet121, EfficientNetB3, and a compact custom CNN as comparison axes (transfer vs scratch; dense connectivity vs efficient scaling vs lightweight custom).</p>
+
+<h3>Large-Scale Chest X-Ray Benchmarks</h3>
+<p>Discuss CheXpert, ChestX-ray14 / CheXNet-style work, NIH datasets; multi-label vs multi-class settings; note that this project uses a <strong>4-class single-label</strong> formulation for clarity and fair softmax comparison.</p>
+
+<h3>COVID-19 Detection from Chest X-Rays</h3>
+<p>Pandemic-era surge in CXR AI; risks of spurious shortcuts (hospital tokens, dataset bias); small COVID sets; why per-class recall and leakage tests matter. Link to this project’s COVID as minority class and Viral Pneumonia→Pneumonia merge.</p>
+
+<h3>Tuberculosis Detection</h3>
+<p>TB screening with CXR in endemic regions; prior transfer-learning studies; mention this project’s earlier binary TB benchmark (historical) and current inclusion of TB as one of four unified classes.</p>
+
+<h3>Pneumonia Detection</h3>
+<p>Kaggle RSNA/Mooney pneumonia dataset prevalence in student projects; binary Normal/Pneumonia CNNs; class imbalance; this project’s prior 92% CNN results as historical baseline, now extended to 4-class head.</p>
+
+<h3>Transfer Learning</h3>
+<p>ImageNet pretraining; freeze-then-fine-tune; learning-rate schedule; catastrophic forgetting; this project’s two-phase protocol and matched unfreeze fractions.</p>
+
+<h3>Data Augmentation and Regularization</h3>
+<p>Geometric augmentation for CXR; Dropout; BatchNorm; class weights vs oversampling; EarlyStopping / ReduceLROnPlateau / Checkpointing as used here.</p>
+
+<h3>Multi-Disease Detection Frameworks</h3>
+<p>Survey multi-label and multi-task CXR systems; contrast with this project’s mutually exclusive 4-class softmax + multi-model ensemble at inference (architecture consensus rather than multi-label heads).</p>
+
+<h3>Deployment and Clinical Translation</h3>
+<p>From notebook to web/API; DICOM/PACS gaps; regulatory/ethical limits; this project’s Flask demo scope and explicit non-diagnostic disclaimer.</p>
+
+<h3>Explainability and Trust</h3>
+<p>Grad-CAM, saliency; clinician trust; note as <strong>gap / future work</strong> for this FYP (not implemented).</p>
+
+<h3>Gaps in Existing Research</h3>
+<p>List gaps this project addresses: (1) incomparable single-disease student models; (2) leakage-unaware splits; (3) accuracy-only reporting; (4) train–serve skew; (5) weak input validation for non-X-ray uploads; (6) lack of ensemble + disagreement surfacing.</p>
+
+<h3>Summary</h3>
+<p>Condense: literature supports CNNs + transfer learning for CXR; careful data hygiene and metrics are essential; this work responds with a unified 4-class multi-architecture benchmark and deployable ensemble app.</p>
+
+<!-- ===================== CHAPTER 3 ===================== -->
+<h2>CHAPTER 3 — METHODOLOGY</h2>
+<p>(Align with existing FYP_Chapter3_Methodology.doc; expand to match these exact subheads.)</p>
+
+<h3>From Single-Disease Models to a Unified Benchmark</h3>
+<p>Narrate the evolution: three siloed models → cannot compare → convert to shared 4-class label space → all architectures retrain from common starting rules (ImageNet / scratch) on one manifest.</p>
+
+<h3>Data Collection and Unified Manifest</h3>
+<p>Describe <code>training/build_manifest.py</code> producing <code>training/manifest.csv</code> with path, class, patient id, source, split. Constraint: existing public datasets only.</p>
+
+<h3>Source Datasets</h3>
+<table>
+<tr><th>Dataset</th><th>Path</th><th>Supplies</th></tr>
+<tr><td>TB Chest X-Ray (Kaggle)</td><td>TB_Chest_Radiography_Database/</td><td>Tuberculosis, Normal</td></tr>
+<tr><td>Covid19-dataset</td><td>DenseNet121/Covid19-dataset/</td><td>COVID-19, Normal, Pneumonia</td></tr>
+<tr><td>Chest X-Ray Pneumonia (Kaggle)</td><td>pneumonia_detection/data/chest_xray/</td><td>Pneumonia, Normal</td></tr>
+</table>
+<p>Viral Pneumonia merged into Pneumonia. COVID caps scale of other classes.</p>
+
+<h3>Design Rules for Honest Splits</h3>
+<ol>
+<li>Content-hash deduplication</li>
+<li>Patient-grouped train/val/test</li>
+<li>Fully qualified patient IDs (avoid filename collisions like 0101.jpeg)</li>
+<li>Multi-source Normal &amp; Pneumonia</li>
+<li>Class-size capping + class weights</li>
+<li>Inspect class×source table before training</li>
+</ol>
+
+<h3>Model Architectures and Shared Head</h3>
+<p>Detail EfficientNetB3, DenseNet121, Custom CNN 5-block stack; shared head; softmax+categorical CE; FINETUNE_FROM densenet=300, efficientnet=340; BatchNorm frozen in phase 2; CNN scratch baseline.</p>
+
+<h3>Training Protocol</h3>
+<p>Shared seed 1337; batch 32; Phase1 LR 1e-4 frozen; Phase2 LR 1e-5 partial unfreeze; Adam; callbacks; outputs weights/*_4class.keras and training/runs/*.json; test never used in training.</p>
+
+<h3>Evaluation Methodology</h3>
+<p><code>evaluate.py</code>: accuracy, balanced accuracy, per-class P/R/F1, confusion matrices, ensemble, comparison.md. <code>leakage_probe.py</code>: predict source vs majority baseline. Why COVID recall is the critical weak point.</p>
+
+<h3>Application Integration Workflow</h3>
+<p>Upload → gate → predict_all → soft ensemble → UI. Weights must be 4-wide; legacy .h5 rejected.</p>
+
+<h3>Summary</h3>
+<p>Methodology authenticates fair comparison + honest metrics + deployable inference path.</p>
+
+<!-- ===================== CHAPTER 4 ===================== -->
+<h2>CHAPTER 4 — SYSTEM DESIGN</h2>
+
+<h3>System Architecture</h3>
+<p>Describe layered view: Presentation (HTML/CSS/Jinja) → Application (Flask routes) → Inference service (predictors: lazy load, lock, ensemble) → Model artefacts (weights/) → Data pipeline (training offline). Draw ASCII/Mermaid: User → Flask → Gate → EfficientNet/DenseNet/CNN → Ensemble → Result page.</p>
+
+<h3>Functional Requirements</h3>
+<ul>
+<li>FR1: Accept PNG/JPG/JPEG uploads (max 16 MB)</li>
+<li>FR2: Validate likely chest radiograph; allow forced override</li>
+<li>FR3: Run every available 4-class model on the same image</li>
+<li>FR4: Display per-class probabilities per model</li>
+<li>FR5: Compute and display soft-voting ensemble and agreement</li>
+<li>FR6: Show clear errors if weights missing / wrong output width</li>
+<li>FR7: Offline training scripts to rebuild weights from manifest</li>
+</ul>
+
+<h3>Non-Functional Requirements</h3>
+<ul>
+<li>NFR1: Reproducibility (seed, committed manifest policy)</li>
+<li>NFR2: Usability (single upload, no model picker required)</li>
+<li>NFR3: Robustness to non-X-ray uploads</li>
+<li>NFR4: Train/serve preprocessing consistency</li>
+<li>NFR5: Maintainability (shared CLASSES in config/common)</li>
+<li>NFR6: Explicit non-clinical safety messaging</li>
+</ul>
+
+<h3>Tools and Technologies Used</h3>
+<p>Python; TensorFlow/Keras; OpenCV; Flask/Werkzeug; NumPy; HTML/CSS; Git; optional Jupyter for historical notebooks. Hardware note: training preferably on capable machine/Mac; inference on CPU possible but slower.</p>
+
+<h3>Chest X-Ray Validation Gate</h3>
+<p>Three stages: (1) monochrome/tint; (2) radiograph envelope features with one violation forgiven; (3) anatomy veto (spine contrast + symmetry). Measured on 351 real vs 106 non-X-ray: 100% real accepted; ~77% non-X-ray rejected (old gate ~21%). Rejection reasons shown; Analyse anyway path secured against path traversal.</p>
+
+<h3>Application Flow and User Interface</h3>
+<p>Home page lists model readiness; upload form; results show probability bars, class blurbs, ensemble, agreement, forced-analysis warning if used. Suggest screenshots as Figure captions.</p>
+
+<h3>Train/Serve Consistency</h3>
+<p>Explain bilinear resize aligned with training decode; same preprocess_input /rescale; CLASSES order shared; refusal of non-4-class weights.</p>
+
+<h3>Summary</h3>
+<p>System design realises methodology as a usable, safer demo with multi-model consensus.</p>
+
+<!-- ===================== CHAPTER 5 ===================== -->
+<h2>CHAPTER 5 — RESULTS AND DISCUSSION</h2>
+
+<h3>Experimental Setup</h3>
+<p>Describe hardware/OS if known <span class="fill">[FILL IN]</span>; Python/TF versions; commands: build_manifest → train --model all → evaluate → leakage_probe; batch size; seed; class counts from manifest printout <span class="fill">[INSERT]</span>.</p>
+
+<h3>Expected Performance Characteristics</h3>
+<p>Discuss a priori: 4-class harder than binary; COVID recall weakest; accuracy may drop vs historical single-disease numbers and that drop is informative; balanced accuracy preferred; ensemble may stabilise predictions when models disagree less on Normal/Pneumonia than COVID.</p>
+
+<h3>Comparative Reporting Template</h3>
+<p>Instruct agent to create empty/filled tables:</p>
+<table>
+<tr><th>Model</th><th>Accuracy</th><th>Balanced Acc.</th><th>Macro P</th><th>Macro R</th><th>Macro F1</th></tr>
+<tr><td>EfficientNetB3</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td></tr>
+<tr><td>DenseNet121</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td></tr>
+<tr><td>Custom CNN</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td></tr>
+<tr><td>Ensemble</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td><td>[INSERT]</td></tr>
+</table>
+<p>Plus per-class recall table especially COVID. Paste from comparison.md when available. Discuss which backbone wins and why (capacity vs data size).</p>
+
+<h3>Challenges Faced and Solutions Applied</h3>
+<ul>
+<li>Incomparable old models → unified 4-class manifest</li>
+<li>Patient/filename leakage → grouped IDs + hash dedupe</li>
+<li>Sigmoid+categorical bug in old EfficientNet → softmax</li>
+<li>Unfair fine-tune by layer index → match unfreeze fraction</li>
+<li>Non-X-ray uploads → rebuilt gate</li>
+<li>Train/serve resize skew → align decode</li>
+<li>Missing P/R/F1 historically → evaluate.py</li>
+<li>Small COVID set → class weights + honest reporting</li>
+</ul>
+
+<h3>Historical Single-Disease Work</h3>
+<p>Present prior TB/COVID/pneumonia results and TB architecture leaderboard as <strong>prior art within the project</strong>, clearly labelled not comparable to 4-class scores. Pneumonia classification report numbers (92% acc; class-wise P/R/F1) may be quoted as historical.</p>
+
+<h3>Implementation Status</h3>
+<p>State what is complete (pipeline, frontend, portable weights bundle if used) and what depends on local training/eval logs. Portable zip includes three .keras weights for demo without retraining.</p>
+
+<h3>Summary of Findings</h3>
+<p>Bullet the scientific findings once numbers exist; until then, emphasise methodological findings (fairness controls, gate improvement 21%→77% non-X-ray reject, ensemble UX).</p>
+
+<!-- ===================== CHAPTER 6 ===================== -->
+<h2>CHAPTER 6 — FUTURE RECOMMENDATIONS</h2>
+
+<h3>Conclusion</h3>
+<p>Reiterate aim achieved: unified 4-class multi-architecture CXR system with ensemble web deployment and honesty-oriented evaluation design. Restate non-diagnostic scope.</p>
+
+<h3>Recommendations</h3>
+<ul>
+<li>Always report per-class recall for minority diseases</li>
+<li>Keep patient-grouped splits in any extension</li>
+<li>Do not compare old binary metrics to 4-class metrics</li>
+<li>Use leakage probe when merging heterogeneous public sets</li>
+</ul>
+
+<h3>Future Enhancements</h3>
+<ul>
+<li>More COVID data / multi-centre validation</li>
+<li>Grad-CAM / explainability overlays</li>
+<li>DICOM support and PACS integration</li>
+<li>Calibration (temperature scaling) and decision thresholds per class</li>
+<li>Active learning / semi-supervised expansion</li>
+<li>Mobile/cloud deployment; auth and audit logs</li>
+<li>Optional VGG19/backbone expansion under same harness</li>
+</ul>
+
+<h3>Summary of Contributions</h3>
+<ol>
+<li>Unified 4-class CXR benchmark from three public sources with leakage controls</li>
+<li>Fair three-architecture training harness (shared head / matched fine-tune fraction)</li>
+<li>Evaluation suite with P/R/F1, balanced accuracy, ensemble, leakage probe</li>
+<li>Flask multi-model demo with soft voting, agreement display, and measured X-ray gate</li>
+<li>Documentation enabling reproducibility (manifest, scripts, status notes)</li>
+</ol>
+
+<!-- ===================== BACK MATTER ===================== -->
+<h2>BACK MATTER</h2>
+
+<h3>References</h3>
+<p>Agent should generate IEEE-style list including: ImageNet; DenseNet paper; EfficientNet paper; CheXNet/Rajpurkar et al.; relevant COVID-CXR surveys; Kaggle TB &amp; pneumonia dataset citations; TensorFlow/Keras docs; Flask. Mark unverified entries [VERIFY]. Include 25–40 references.</p>
+
+<h3>Appendix A — Dataset Details</h3>
+<p><strong>Dataset Overview:</strong> 4 classes; merged corpus; COVID bottleneck.<br>
+<strong>Data Sources:</strong> table of URLs/paths/licenses as known.<br>
+<strong>Preprocessing and Splits:</strong> sizes, patient grouping, dedupe, augmentation, class weights, preprocess per model.</p>
+
+<h3>Appendix B — Model Architecture Summaries</h3>
+<p><strong>Model Training and Implementation:</strong> layer summaries; shared head; phase-1/2; file map (training/*.py, Frontend/*, weights); how to run portable inference bundle; commands from INSTRUCTIONS.md.</p>
+
+<h3>Appendix C — Alignment with Sustainable Development Goals (SDGs)</h3>
+<p>Map project to SDGs in academic tone:</p>
+<ul>
+<li><strong>SDG 3 Good Health and Well-being:</strong> decision-support research for respiratory disease screening accessibility (with explicit non-diagnostic limit).</li>
+<li><strong>SDG 4 Quality Education:</strong> reproducible teaching artefact for medical AI methodology (fair splits, metrics literacy).</li>
+<li><strong>SDG 9 Industry, Innovation and Infrastructure:</strong> open software pipeline for multi-model CXR benchmarking.</li>
+<li><strong>SDG 10 Reduced Inequalities:</strong> potential relevance to resource-limited screening contexts as future clinical research—not a deployed medical device.</li>
+</ul>
+<p>Avoid overclaiming impact; keep “potential contribution / educational research” language.</p>
+
+<!-- ===================== EXTRA PROMPTS ===================== -->
+<h2>OPTIONAL FOLLOW-UP PROMPTS (use after master generation)</h2>
+
+<div class="prompt">PROMPT A — Expand Literature Review only:
+Rewrite Chapter 2 to ~3000–4000 words with deeper critique, and add a comparison table of related works (year, task, dataset, method, reported metric, limitation). Keep citations honest; mark [VERIFY] where needed.</div>
+
+<div class="prompt">PROMPT B — Insert real metrics:
+I am pasting training/results/comparison.md below. Replace all [INSERT] placeholders in Chapter 5 with these numbers, discuss winners/losers, and add one paragraph on COVID per-class recall.</div>
+
+<div class="prompt">PROMPT C — Viva defence sheet:
+From the finished report, produce a 2-page viva Q&amp;A: likely questions on leakage, why 4 classes, why ensemble, why accuracy dropped vs binary, missing Grad-CAM, ethical limits, and SDG mapping.</div>
+
+<div class="prompt">PROMPT D — Plagiarism-safe paraphrase:
+Paraphrase Chapter 3 Methodology to reduce similarity while keeping all technical facts unchanged (layer indices, paths, metrics definitions).</div>
+
+<h2>QUALITY RULES FOR THE WRITING AGENT</h2>
+<ul>
+<li>Do not claim FDA/clinical approval or hospital deployment.</li>
+<li>Do not invent Precision/Recall for TB/COVID 4-class unless provided.</li>
+<li>Do not mix binary historical accuracies with 4-class results without labelling them historical.</li>
+<li>Prefer “was designed / was implemented / is intended to” over “cures / diagnoses patients”.</li>
+<li>Every chapter ending Summary should be 1 short paragraph.</li>
+<li>Keep student identity as [FILL IN] unless provided.</li>
+</ul>
+
+<p><em>End of brief. Generate the full report following the heading map exactly.</em></p>
+
+</body>
+</html>

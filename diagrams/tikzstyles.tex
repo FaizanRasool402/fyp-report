@@ -1,0 +1,28 @@
+% Shared TikZ styles for methodology / system diagrams
+\definecolor{DiagSlate}{RGB}{32,56,78}
+\definecolor{DiagBlue}{RGB}{55,98,140}
+\definecolor{DiagTeal}{RGB}{45,125,125}
+\definecolor{DiagSoft}{RGB}{232,240,248}
+\definecolor{DiagAccent}{RGB}{196,220,236}
+\definecolor{DiagWarn}{RGB}{180,110,60}
+\definecolor{DiagOk}{RGB}{60,130,90}
+
+\tikzset{
+  diag box/.style={
+    draw=DiagSlate,
+    line width=0.6pt,
+    rounded corners=2pt,
+    align=center,
+    font=\footnotesize\sffamily,
+    inner sep=5pt,
+    minimum height=0.85cm
+  },
+  diag start/.style={diag box, fill=DiagSlate, text=white, font=\footnotesize\sffamily\bfseries},
+  diag step/.style={diag box, fill=DiagSoft, text=DiagSlate},
+  diag model/.style={diag box, fill=DiagAccent, text=DiagSlate, minimum width=2.5cm},
+  diag out/.style={diag box, fill=DiagTeal, text=white, font=\footnotesize\sffamily\bfseries},
+  diag gate/.style={diag box, fill=DiagWarn!18, text=DiagSlate, draw=DiagWarn},
+  diag ok/.style={diag box, fill=DiagOk!18, text=DiagSlate, draw=DiagOk},
+  diag arrow/.style={-{Latex[length=2.2mm]}, thick, DiagSlate!80},
+  diag label/.style={font=\scriptsize\sffamily, text=DiagSlate!80, align=center}
+}

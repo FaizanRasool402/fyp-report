@@ -1,0 +1,269 @@
+% ============================================================
+% Title Page 1
+% ============================================================
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+    \begin{titlepagetext}
+    \centering
+    \vspace*{1.5cm}
+    \hamdardlogolarge
+    \vspace{2.2cm}
+
+    \titlepagetitle
+    \vspace{1.2cm}
+
+    {\normalsize By\par}
+    \vspace{0.4cm}
+
+    \titlepagestudents
+
+    \vspace{1cm}
+    {\normalsize\itshape Under the supervision of\par}
+    \vspace{0.3cm}
+    {\normalsize\bfseries \supervisorname\par}
+
+    \vfill
+    \titlepagefooter
+    \end{titlepagetext}
+\end{titlepage}
+
+% ============================================================
+% Title Page 2 (with supervisor)
+% ============================================================
+\begin{titlepage}
+    \begin{titlepagetext}
+    \centering
+    \vspace*{1.5cm}
+    \hamdardlogolarge
+    \vspace{2.2cm}
+
+    \titlepagetitle
+    \vspace{1.2cm}
+
+    {\normalsize By\par}
+    \vspace{0.4cm}
+
+    \titlepagestudents
+
+    \vspace{1cm}
+    {\normalsize\itshape Under the supervision of\par}
+    \vspace{0.3cm}
+    {\normalsize\bfseries \supervisorname\par}
+
+    \vfill
+    \titlepagefooter
+    \end{titlepagetext}
+\end{titlepage}
+
+% ============================================================
+% Title Page 3 (degree fulfillment) — no logo on sample
+% ============================================================
+\begin{titlepage}
+    \begin{titlepagetext}
+    \centering
+    \vspace*{2.5cm}
+
+    \titlepagetitle
+    \vspace{1.5cm}
+
+    {\large By\par}
+    \vspace{0.5cm}
+
+    \titlepagestudents
+
+    \vspace{1.2cm}
+    {\large A project presented to the\par}
+    {\large\bfseries Department Of Computing\par}
+    {\large In partial fulfillment of the\par}
+    {\large requirements for the degree of\par}
+    {\large Bachelors of Science\par}
+    {\large In\par}
+    {\large Computer Science\par}
+
+    \vfill
+    \titlepagefooterbottom
+    \end{titlepagetext}
+\end{titlepage}
+
+% ============================================================
+% Certificate Page
+% ============================================================
+\begin{titlepage}
+    \begin{titlepagetext}
+    \centering
+    \vspace*{0.6cm}
+    \hamdardlogosmall
+    \vspace{0.6cm}
+
+    {\large\bfseries Faculty of Engineering Sciences and Technology\par}
+    {\large Hamdard University Islamabad Campus, Pakistan\par}
+    \vspace{1cm}
+
+    {\LARGE\bfseries CERTIFICATE\par}
+    \vspace{1cm}
+
+    \begin{minipage}{0.9\textwidth}
+        \justifying
+        \normalsize
+        This project ``\reporttitle'' presented by \textbf{Muhammad Ehtisham Hanif}, \textbf{Humair Hayat}, and \textbf{Faizan Rasool} under the direction of their project advisor, \textbf{\supervisorname}, and approved by the project examination committee, has been presented to and accepted by the Faculty of Engineering Sciences and Technology, in partial fulfillment of the requirements for \textbf{Bachelor of Science in Computer Science}.
+    \end{minipage}
+
+    \vfill
+
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \rule{5.5cm}{0.4pt}\\[0.4em]
+        \supervisorname\\[0.2em]
+        (Project Advisor)
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \rule{5.5cm}{0.4pt}\\[0.4em]
+        Dr.~Muhammad Shaheer\\[0.2em]
+        (Examiner 1)
+    \end{minipage}
+
+    \vspace{1.2cm}
+
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \rule{5.5cm}{0.4pt}\\[0.4em]
+        Sir Usman Javed\\[0.2em]
+        (Examiner 2)
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \rule{5.5cm}{0.4pt}\\[0.4em]
+        Dr.~Tahir Saleem\\[0.2em]
+        (Chairman, Department of Computing)
+    \end{minipage}
+
+    \vspace{1.2cm}
+
+    \begin{minipage}[t]{0.45\textwidth}
+        \centering
+        \rule{5.5cm}{0.4pt}\\[0.4em]
+        Dr.~Hassan Raza\\[0.2em]
+        (Associate Dean, FEST)
+    \end{minipage}
+    \end{titlepagetext}
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+
+% ============================================================
+% Front matter (roman numerals)
+% ============================================================
+\frontmatter
+\pagenumbering{roman}
+\pagestyle{frontmatter}
+
+% Abstract
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Pulmonary diseases such as tuberculosis (TB), COVID-19, and pneumonia remain major causes of morbidity and mortality worldwide. Chest radiography is often the most accessible imaging modality for initial screening, yet specialist radiologists are scarce in many regions. Deep learning can assist screening workflows, but many student and demonstration systems train separate single-disease models on incompatible label spaces. Such designs prevent fair architecture comparison and prevent a single upload from receiving a coherent multi-disease assessment. Data leakage (patient overlap, duplicates) and train--serve preprocessing mismatches further undermine reported accuracy.
+
+This report presents the design and implementation of an \textbf{AI Agent for Lung Disease Detection}: a research-grade chest X-ray system that classifies images into a locked four-class label space---Normal, Tuberculosis, COVID-19, and Pneumonia. Three architectures---EfficientNetB3 and DenseNet121 (ImageNet transfer learning) and a custom CNN (trained from scratch)---are trained on one shared manifest built by merging three public sources. The methodology applies content-hash deduplication, patient-grouped splits, multi-source Normal and Pneumonia coverage, class-size capping with inverse-frequency class weights, an identical classification head for transfer models, and matched fine-tuning capacity (approximately 43\% of backbone weights unfrozen). Evaluation emphasises per-class precision, recall, and F1-score, balanced accuracy, confusion matrices, soft-voting ensemble metrics, and a source-leakage probe rather than headline accuracy alone.
+
+A Flask web application runs every available four-class model on each upload, applies a multi-stage chest X-ray validation gate (with an optional Analyse-anyway override), and presents per-model probability distributions together with an ensemble verdict and agreement status. Train and serve preprocessing are aligned (bilinear resize). On the held-out test split ($n=482$), DenseNet121 achieved 90.87\% accuracy and 89.14\% balanced accuracy, while soft-voting ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy; COVID-19 remained the minority class with limited precision despite high recall. A source-leakage probe scored 88.17\% against a 49.79\% majority baseline (moderate source signal). The system is a research demonstration on public datasets and is \textbf{not} a clinical diagnostic device.
+
+% Acknowledgement
+\chapter*{Acknowledgement}
+\addcontentsline{toc}{chapter}{Acknowledgement}
+
+All praises and thanks to Al-Mighty ``ALLAH'', the Most Merciful, the Most Gracious, the source of knowledge and wisdom endowed to mankind, who conferred us with the power of mind and capability to take this project to the exciting ocean of knowledge. All respects are for our most beloved Holy Prophet ``Hazrat MUHAMMAD (Peace Be Upon Him)'', whose personality will always be a source of guidance for humanity.
+
+Acknowledgement is due to Hamdard Institute of Engineering and Technology for the support of this project, a highly appreciated achievement for us at the undergraduate level.
+
+We wish to express our appreciation to our advisor, \supervisorname, for her keen guidance, sincere help, and friendly manner which inspired us to perform well in the project and made it a reality.
+
+Many people, especially our classmates and team members themselves, have made valuable comments and suggestions on this project which gave us the inspiration to improve it further.
+
+Finally, we would like to thank our family and friends for their moral support and encouragement throughout the project. We also acknowledge the providers of the public chest X-ray corpora used in this work, including the Kaggle tuberculosis and pneumonia datasets and the publicly shared COVID-19 radiography collections that made the unified benchmark possible.
+
+% Project in Brief
+\chapter*{Project in Brief}
+\addcontentsline{toc}{chapter}{Project in Brief}
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.28}
+\arrayrulecolor{TableRule}
+\begin{tabularx}{\textwidth}{%
+  |>{\columncolor{TableKey}\color{TableHeadText}\bfseries\RaggedRight\arraybackslash}p{3.2cm}%
+  |>{\color{black}\RaggedRight\arraybackslash}X|}
+\hline
+Project Title & AI Agent for Lung Disease Detection \\
+\hline
+Objective & To develop a research-grade chest X-ray multi-disease classification system that benchmarks three deep learning architectures on a unified four-class dataset and deploys them through an ensemble-capable web application. \\
+\hline
+Main Contributions &
+\begin{minipage}[t]{\linewidth}
+\vspace{0.08cm}
+\begin{itemize}[leftmargin=*, nosep, topsep=0pt]
+    \item Fair 4-class architecture benchmark (shared manifest, head, and splits)
+    \item Ensemble CAD-style Flask demo with disagreement surfacing
+    \item Honest evaluation design (per-class metrics + leakage probe)
+\end{itemize}
+\vspace{0.08cm}
+\end{minipage} \\
+\hline
+Limitation & Public small-data research demonstration only; not a clinical diagnostic device. \\
+\hline
+Undertaken By &
+\begin{minipage}[t]{\linewidth}
+\vspace{0.08cm}
+\begin{itemize}[leftmargin=*, nosep, topsep=0pt]
+    \item Muhammad Ehtisham Hanif (ECI-IT-21-064)
+    \item Humair Hayat (ECI-IT-21-058)
+    \item Faizan Rasool (ECI-IT-21-057)
+\end{itemize}
+\vspace{0.08cm}
+\end{minipage} \\
+\hline
+Supervised By & \supervisorname \\
+\hline
+Duration of Project &
+\begin{minipage}[t]{\linewidth}
+\vspace{0.08cm}
+\begin{itemize}[leftmargin=*, nosep, topsep=0pt]
+    \item Start Date: October 2024
+    \item End Date: September 2025
+\end{itemize}
+\vspace{0.08cm}
+\end{minipage} \\
+\hline
+Tools \& Technologies Used &
+\begin{minipage}[t]{\linewidth}
+\vspace{0.08cm}
+\begin{itemize}[leftmargin=*, nosep, topsep=0pt]
+    \item \textbf{Programming Languages:} Python
+    \item \textbf{Frameworks \& Libraries:} TensorFlow, Keras, Flask, OpenCV
+    \item \textbf{Training pipeline:} \path{training/} (manifest, train, evaluate, leakage probe)
+    \item \textbf{Development Tools:} Jupyter Notebook, Visual Studio Code
+    \item \textbf{Hardware:} Standard CPU/GPU-based system used for training and testing
+\end{itemize}
+\vspace{0.08cm}
+\end{minipage} \\
+\hline
+System Used & Windows-based development system utilizing CPU/GPU processing for model training and testing. \\
+\hline
+\end{tabularx}
+\arrayrulecolor{black}
+\end{table}
+
+% Table of Contents
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+
+% Main matter (arabic numerals)
+\mainmatter
+\pagenumbering{arabic}
+\setcounter{page}{1}

@@ -1,0 +1,24 @@
+# LaTeX build artefacts
+*.aux
+*.log
+*.lof
+*.lot
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+
+# Temporary diagram export junk
+diagrams/_tmp*.png
+diagrams/presentation-*.png
+diagrams/export_diagrams.aux
+diagrams/export_diagrams.log

@@ -1,0 +1,298 @@
+\chaptertitlepage{Results and Discussion}
+
+This chapter reports measured results for the unified four-class system on the held-out test split of \path{training/manifest.csv}. All Accuracy, Precision, Recall, F1, confusion-matrix, and leakage-probe figures below are taken from verified evaluation exports (\path{training/results/comparison.md}, \path{results.json}, \path{ensemble.json}, \path{leakage_probe.json}, and run logs). Historical single-disease scores remain labelled as prior work and are not mixed into the four-class tables.
+
+\section{Experimental Setup}
+
+Evaluation used seed 1337, patient-grouped splits, and class order Normal, Tuberculosis, COVID-19, Pneumonia. The realised split sizes were 2{,}260 / 485 / 482 images (70.0\% / 15.0\% / 14.9\%). Models were trained with batch size 32 and inverse-frequency class weights (COVID-19 weight $\approx$ 2.851). The per-class selection cap used for this run was 1{,}200 (\texttt{--cap 1200}).
+
+\begin{table}[H]
+\centering
+\caption{Training environment (machine that produced the four-class weights)}
+\label{tab:env-train}
+\small
+\begin{tabular}{@{}P{4.0cm}P{8.2cm}@{}}
+\toprule
+\HeaderRow \Head{Item} & \Head{Value} \\
+\midrule
+OS & macOS 15.7.9 (x86\_64) \\
+\ZebraRow CPU & Intel Core i9-9980HK @ 2.40\,GHz (16 logical cores) \\
+Memory & 32\,GB \\
+\ZebraRow GPU & None (CPU-only TensorFlow) \\
+Python / TensorFlow / Keras & 3.11.15 / 2.16.2 / 3.15.0 \\
+\ZebraRow Training dates & DenseNet121: 4 Aug 2026; EfficientNetB3: 5 Aug 2026; CNN: 9 Aug 2026 \\
+Evaluation & Per-model comparison: 9 Aug 2026; ensemble + leakage: 13 Sep 2026 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Unified Manifest Summary}
+
+After MD5 content-hash deduplication the source pool contained 10{,}328 images (45 duplicates removed). COVID-19 fell from 137 to \textbf{130} images. The selected unified manifest contains \textbf{3{,}227} images. Viral Pneumonia from the COVID source is merged into Pneumonia (89 \texttt{covid\_db} images under Pneumonia).
+
+\begin{table}[H]
+\centering
+\caption{Selected unified manifest counts by class and split}
+\label{tab:manifest-splits}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\HeaderRow \Head{Class} & \Head{Train} & \Head{Val} & \Head{Test} & \Head{Total} \\
+\midrule
+Normal & 840 & 180 & 180 & 1{,}200 \\
+\ZebraRow Tuberculosis & 488 & 105 & 104 & 697 \\
+COVID-19 & 91 & 20 & 19 & 130 \\
+\ZebraRow Pneumonia & 841 & 180 & 179 & 1{,}200 \\
+\AccentRow \textbf{Total} & \textbf{2{,}260} & \textbf{485} & \textbf{482} & \textbf{3{,}227} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Class $\times$ source contingency (selected manifest)}
+\label{tab:class-source}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\HeaderRow \Head{Class} & \Head{covid\_db} & \Head{pneumonia\_db} & \Head{tb\_db} & \Head{Total} \\
+\midrule
+Normal & 88 & 556 & 556 & 1{,}200 \\
+\ZebraRow Tuberculosis & 0 & 0 & 697 & 697 \\
+COVID-19 & 130 & 0 & 0 & 130 \\
+\ZebraRow Pneumonia & 89 & 1{,}111 & 0 & 1{,}200 \\
+\AccentRow \textbf{Total} & \textbf{307} & \textbf{1{,}667} & \textbf{1{,}253} & \textbf{3{,}227} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Normal and Pneumonia are multi-source by design; Tuberculosis and COVID-19 remain single-source and are therefore more exposed to source shortcutting (Section~\ref{sec:leakage}).
+
+\section{Four-Class Comparative Results}
+
+All models were scored on the same test split ($n=482$). Soft-voting ensemble metrics come from offline \texttt{ensemble.json} (mean class probabilities across the three models).
+
+\begin{table}[H]
+\centering
+\caption{Overall four-class test metrics ($n=482$)}
+\label{tab:comparative}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\HeaderRow \Head{Model} & \Head{Accuracy} & \Head{Bal.\ Acc.} & \Head{Macro P} & \Head{Macro R} & \Head{Macro F1} \\
+\midrule
+EfficientNetB3 & 82.99\% & 83.00\% & 0.767 & 0.830 & 0.745 \\
+\ZebraRow DenseNet121 & 90.87\% & 89.14\% & 0.850 & 0.891 & 0.864 \\
+Custom CNN & 90.25\% & 88.36\% & 0.813 & 0.884 & 0.835 \\
+\AccentRow Ensemble (soft vote) & \textbf{92.32\%} & \textbf{93.07\%} & 0.842 & \textbf{0.931} & \textbf{0.867} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Among single models, DenseNet121 leads on accuracy (90.87\%), balanced accuracy (89.14\%), and macro F1 (0.864). EfficientNetB3 records the highest single-model COVID-19 recall (89.47\%) but much lower COVID precision. The ensemble improves overall accuracy to 92.32\% and balanced accuracy to 93.07\%.
+
+Because COVID-19 has only 19 test images, \textbf{balanced accuracy} is preferred as the headline metric over plain accuracy.
+
+\section{Per-Class Precision, Recall, and F1}
+
+\subsection{Recall summary}
+
+\begin{table}[H]
+\centering
+\caption{Per-class recall on the test set}
+\label{tab:recall}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\HeaderRow \Head{Model} & \Head{Normal} & \Head{TB} & \Head{COVID-19} & \Head{Pneumonia} \\
+\midrule
+EfficientNetB3 & 78.3\% & 69.2\% & 89.5\% & 95.0\% \\
+\ZebraRow DenseNet121 & 86.1\% & 88.5\% & 84.2\% & 97.8\% \\
+Custom CNN & 80.6\% & 96.2\% & 78.9\% & 97.8\% \\
+\AccentRow Ensemble & 85.6\% & 94.2\% & 94.7\% & 97.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{DenseNet121 (best single-model macro F1)}
+
+\begin{table}[H]
+\centering
+\caption{DenseNet121 per-class metrics}
+\label{tab:densenet-pc}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\HeaderRow \Head{Class} & \Head{Precision} & \Head{Recall} & \Head{F1} & \Head{Support} \\
+\midrule
+Normal & 92.3\% & 86.1\% & 0.891 & 180 \\
+\ZebraRow Tuberculosis & 97.9\% & 88.5\% & 0.929 & 104 \\
+COVID-19 & 59.3\% & 84.2\% & 0.696 & 19 \\
+\ZebraRow Pneumonia & 90.7\% & 97.8\% & 0.941 & 179 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ensemble (soft voting)}
+
+\begin{table}[H]
+\centering
+\caption{Ensemble per-class metrics}
+\label{tab:ensemble-pc}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\HeaderRow \Head{Class} & \Head{Precision} & \Head{Recall} & \Head{F1} & \Head{Support} \\
+\midrule
+Normal & 95.7\% & 85.6\% & 0.903 & 180 \\
+\ZebraRow Tuberculosis & 97.0\% & 94.2\% & 0.956 & 104 \\
+COVID-19 & 48.7\% & 94.7\% & 0.643 & 19 \\
+\ZebraRow Pneumonia & 95.6\% & 97.8\% & 0.967 & 179 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+COVID-19 precision remains limited for every model (no single model exceeds $\sim$60\%). Ensemble COVID recall reaches 94.7\%, but the small support ($n=19$) means that figure has high sampling variance and must be quoted with that caveat.
+
+\section{Confusion Matrices}
+
+Class axis order is Normal, Tuberculosis, COVID-19, Pneumonia (rows = true, columns = predicted).
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{images/results/confusion_densenet.png}
+\caption{DenseNet121 confusion matrix}
+\label{fig:cm-densenet}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{images/results/confusion_ensemble.png}
+\caption{Ensemble confusion matrix}
+\label{fig:cm-ensemble}
+\end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{images/results/confusion_efficientnet.png}
+\caption{EfficientNetB3 confusion matrix}
+\label{fig:cm-efficientnet}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\linewidth]{images/results/confusion_cnn.png}
+\caption{Custom CNN confusion matrix}
+\label{fig:cm-cnn}
+\end{minipage}
+\end{figure}
+
+\section{Leakage Probe}
+\label{sec:leakage}
+
+A source-prediction probe (custom CNN @ $150\times150$, 8 epochs) scored \textbf{88.17\%} source accuracy against a majority-class baseline of \textbf{49.79\%} (+38.4 percentage points). The recorded verdict is \textbf{moderate}: datasets are partly separable by source, but not trivially near 100\%. Because Tuberculosis and COVID-19 are single-source, part of their recall could rest on scanner/processing cues; Normal and Pneumonia are multi-source and less exposed to that shortcut. This caveat should be read alongside the disease-classification tables.
+
+\section{Training Run Summary}
+
+\begin{table}[H]
+\centering
+\caption{Saved validation metrics and training cost}
+\label{tab:runs}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\HeaderRow \Head{Model} & \Head{Val Acc.} & \Head{Val Loss} & \Head{Epochs} & \Head{Train time} \\
+\midrule
+EfficientNetB3 & 80.00\% & 0.492 & 20 & $\sim$35.7\,h (CPU) \\
+\ZebraRow DenseNet121 & 89.90\% & 0.299 & 20 & 310.6\,min \\
+Custom CNN & 88.87\% & 0.354 & 20 & 36.8\,min \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Parameter counts were approximately 11.2\,M (EfficientNetB3), 7.3\,M (DenseNet121), and 1.25\,M (Custom CNN). EfficientNetB3's long wall-clock time reflects CPU-only training on the Mac host.
+
+\section{Deployed Interface Demonstrations}
+
+Figures~\ref{fig:tb-prediction}--\ref{fig:pneumonia-prediction} show the Flask UI returning consensus soft-voting verdicts with per-model probability bars. Offline ensemble metrics above match the same soft-voting definition used in evaluation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui_tb_result.png}
+\caption{Consensus Tuberculosis verdict with per-model 4-class probability bars}
+\label{fig:tb-prediction}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui_covid_result.png}
+\caption{Consensus COVID-19 verdict with per-model 4-class probability bars}
+\label{fig:covid-prediction}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{images/ui_pneumonia_result.png}
+\caption{Consensus Pneumonia verdict with per-model 4-class probability bars}
+\label{fig:pneumonia-prediction}
+\end{figure}
+
+\section{Challenges Faced and Solutions Applied}
+
+\begin{table}[H]
+\centering
+\caption{Challenges and solutions during the 4-class conversion}
+\label{tab:challenges}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}cP{3.8cm}P{4.8cm}@{}}
+\toprule
+\HeaderRow \Head{\#} & \Head{Challenge} & \Head{Solution} \\
+\midrule
+1 & Incomparable old models & Unified 4-class manifest \\
+\ZebraRow 2 & Patient/filename leakage & Grouped IDs + hash dedupe \\
+3 & Sigmoid + categorical bug & Softmax heads for all models \\
+\ZebraRow 4 & Unfair fine-tune by layer index & Match $\sim$43\% unfreeze fraction \\
+5 & Non-X-ray uploads & Rebuilt 3-stage gate (21\%$\rightarrow$77\% reject) \\
+\ZebraRow 6 & Train/serve resize skew & Align bilinear decode \\
+7 & Missing P/R/F1 historically & \texttt{evaluate.py} suite \\
+\ZebraRow 8 & Small COVID set ($n{=}130$) & Class weights + honest recall/precision reporting \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\section{Historical Single-Disease Work}
+
+Prior binary results (EfficientNetB3 TB test accuracy 95.63\%; pneumonia CNN 92\% on 624 images; historical COVID validation near 0\% due to overfitting) are \textbf{not comparable} to the four-class figures in this chapter. They remain useful only as prior project context.
+
+\section{Implementation Status}
+
+\begin{table}[H]
+\centering
+\caption{Implementation status after evaluation export}
+\label{tab:status}
+\small
+\begin{tabular}{@{}P{5.2cm}P{6.5cm}@{}}
+\toprule
+\HeaderRow \Head{Component} & \Head{State} \\
+\midrule
+Unified manifest & Complete (3{,}227 images; Table~\ref{tab:manifest-splits}) \\
+\ZebraRow Four-class weights & Present \\
+Held-out evaluation & Complete (Tables~\ref{tab:comparative}--\ref{tab:ensemble-pc}) \\
+\ZebraRow Leakage probe & Complete (88.17\% vs 49.79\% baseline) \\
+Frontend ensemble UI + gate & Complete \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Summary of Findings}
+
+On the unified four-class test set ($n=482$), DenseNet121 is the strongest single backbone (90.87\% accuracy; 89.14\% balanced accuracy; macro F1 0.864), while soft-voting ensemble reaches 92.32\% accuracy and 93.07\% balanced accuracy. Pneumonia recall is high across models ($\ge$95\%). COVID-19 remains the difficult minority class: recall can be high (ensemble 94.7\%) while precision stays modest, reflecting only 19 COVID test images. The leakage probe shows moderate source signal (88.17\% vs 49.79\% baseline), so single-source TB/COVID results should be interpreted cautiously. Overall, the results support the redesign goal: a fair multi-architecture comparison under shared data, with metrics that expose minority-class behaviour rather than hiding it behind headline accuracy alone.

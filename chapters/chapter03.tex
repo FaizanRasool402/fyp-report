@@ -1,0 +1,233 @@
+\chaptertitlepage{Methodology}
+
+This chapter presents the research methodology for a multi-architecture chest X-ray disease detection system. The objective is not only to classify respiratory conditions from radiographs, but also to enable a fair and reproducible comparison among three deep learning architectures trained under identical experimental conditions. The pipeline comprises dataset unification, preprocessing and augmentation, model design, training, evaluation with leakage analysis, and Flask deployment with ensemble inference.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.45cm and 0.35cm,
+  every node/.style={font=\footnotesize\sffamily}
+]
+\node[diag start, minimum width=2.1cm] (s1) {Public CXR\\sources};
+\node[diag step, right=of s1, minimum width=2.1cm] (s2) {Build unified\\manifest};
+\node[diag step, right=of s2, minimum width=2.1cm] (s3) {Preprocess +\\augment};
+\node[diag step, right=of s3, minimum width=2.1cm] (s4) {Train three\\architectures};
+\node[diag step, below=1.1cm of s4, minimum width=2.1cm] (s5) {Evaluate +\\leakage probe};
+\node[diag out, left=of s5, minimum width=2.1cm] (s6) {Flask ensemble\\deployment};
+
+\draw[diag arrow] (s1) -- (s2);
+\draw[diag arrow] (s2) -- (s3);
+\draw[diag arrow] (s3) -- (s4);
+\draw[diag arrow] (s4) -- (s5);
+\draw[diag arrow] (s5) -- (s6);
+
+\node[diag label, below=0.15cm of s2] {dedupe, patient splits};
+\node[diag label, below=0.15cm of s3] {model-specific sizes};
+\node[diag label, below=0.15cm of s6] {soft voting + X-ray gate};
+\end{tikzpicture}
+\caption{End-to-end methodology pipeline for the unified four-class system}
+\label{fig:method-pipeline}
+\end{figure}
+
+\section{From Single-Disease Models to a Unified Benchmark}
+
+An earlier version of this project used three siloed models on incompatible label spaces: binary tuberculosis, COVID-19 multi-class screening (historically including Viral Pneumonia), and binary pneumonia. Those models could not be compared rigorously, because performance differences might reflect dataset differences rather than architectural strength. The revised methodology converts the problem into a unified four-class classification task and trains all three architectures on the same merged dataset, the same patient-grouped splits, the same classification head design (for transfer models), and the same training budget. The locked label order is Normal, Tuberculosis, COVID-19, Pneumonia. Viral Pneumonia from COVID sources is merged into Pneumonia because the Kaggle pneumonia corpus mixes bacterial and viral cases and cannot be separated retrospectively.
+
+\section{Data Collection and Unified Manifest}
+
+No new private clinical datasets were collected. A builder script (\path{training/build_manifest.py}) merges three public sources into \path{training/manifest.csv} with image paths, class labels, patient identifiers, source tags, and train/validation/test assignments.
+
+\subsection{Source Datasets}
+
+\begin{table}[H]
+\centering
+\caption{Source datasets used to construct the unified four-class corpus}
+\label{tab:method-datasets}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}P{3.4cm}P{4.0cm}P{4.2cm}@{}}
+\toprule
+\HeaderRow \Head{Source dataset} & \Head{Expected path} & \Head{Classes contributed} \\
+\midrule
+TB Chest X-Ray (Kaggle) & \path{TB_Chest_Radiography_Database/} & Tuberculosis, Normal \\
+\ZebraRow Covid19-dataset & \path{DenseNet121/Covid19-dataset/} & COVID-19, Normal, Pneumonia \\
+Chest X-Ray Pneumonia (Kaggle) & \path{pneumonia_detection/data/chest_xray/} & Pneumonia, Normal \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.55cm and 0.55cm]
+\node[diag step, minimum width=2.6cm] (tb) {TB CXR\\database};
+\node[diag step, below=of tb, minimum width=2.6cm] (cov) {COVID-19\\dataset};
+\node[diag step, below=of cov, minimum width=2.6cm] (pn) {Pneumonia\\CXR dataset};
+
+\node[diag start, right=1.4cm of cov, minimum width=2.8cm] (merge) {Merge +\\hash dedupe};
+\node[diag step, right=of merge, minimum width=2.6cm] (split) {Patient-grouped\\train/val/test};
+\node[diag out, right=of split, minimum width=2.4cm] (man) {manifest.csv\\4 classes};
+
+\draw[diag arrow] (tb.east) -- ++(0.55,0) |- (merge.west);
+\draw[diag arrow] (cov) -- (merge);
+\draw[diag arrow] (pn.east) -- ++(0.55,0) |- (merge.west);
+\draw[diag arrow] (merge) -- (split);
+\draw[diag arrow] (split) -- (man);
+
+\node[diag label, below=0.12cm of man] {Normal $\cdot$ TB $\cdot$ COVID-19 $\cdot$ Pneumonia};
+\end{tikzpicture}
+\caption{Dataset unification into a shared four-class training manifest}
+\label{fig:data-unify}
+\end{figure}
+
+\subsection{Design Rules for Honest Splits}
+
+\begin{enumerate}
+    \item \textbf{Content-hash deduplication.} Byte-identical images are removed so duplicates cannot span train and test.
+    \item \textbf{Patient-grouped splitting.} Images from one patient never appear in more than one of train, validation, or test.
+    \item \textbf{Fully qualified patient IDs.} Plain stems such as \texttt{0101.jpeg} collide across COVID folders; identifiers are path-qualified and grouped globally.
+    \item \textbf{Multi-source Normal and Pneumonia.} Both classes draw from more than one corpus to reduce scanner/dataset shortcutting.
+    \item \textbf{Class-size capping with class weights.} COVID-19 remains $130$ after deduplication; other classes were capped at 1{,}200 in the reported run (\texttt{--cap 1200}); residual imbalance uses inverse-frequency weights (COVID weight $\approx$ 2.851).
+    \item \textbf{Class$\times$source inspection.} Training proceeds only after confirming Normal and Pneumonia are multi-source.
+\end{enumerate}
+
+All images are from public research corpora. The system is a research demonstration and architecture benchmark, not a clinically validated diagnostic device.
+
+\section{Preprocessing and Data Augmentation}
+
+\subsection{Model-Specific Preprocessing}
+
+\begin{table}[H]
+\centering
+\caption{Preprocessing per architecture}
+\label{tab:method-preprocess}
+\small
+\begin{tabular}{@{}llc@{}}
+\toprule
+\HeaderRow \Head{Model} & \Head{Input size} & \Head{Preprocessing} \\
+\midrule
+EfficientNetB3 & $256\times256\times3$ & EfficientNet \texttt{preprocess\_input} \\
+\ZebraRow DenseNet121 & $224\times224\times3$ & DenseNet \texttt{preprocess\_input} \\
+Custom CNN & $150\times150\times3$ & Divide by 255 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Training and inference share the same decode and bilinear resize path. An earlier nearest-neighbour resize at inference versus bilinear training was corrected because it altered a large fraction of pixel values (train--serve skew).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{images/diagrams/preprocessing_pipeline.png}
+\caption{Preprocessing and augmentation pipeline with model-specific input sizes and normalisation}
+\label{fig:preprocess-pipeline}
+\end{figure}
+
+\subsection{Augmentation and Class Imbalance}
+
+Geometric augmentation (rotation, translation, zoom, horizontal flip within controlled ranges) is shared across architectures through the common data pipeline. Oversampling of pathological images was avoided; inverse-frequency class weights with categorical cross-entropy emphasise minority-class errors instead.
+
+\section{Model Architectures and Shared Head}
+
+Models are built in \texttt{training/models.py}. Transfer models use an identical head so the benchmark measures the backbone:
+\[
+\text{GAP} \rightarrow \text{Dropout}(0.5) \rightarrow \text{Dense}(256,\text{ReLU}) \rightarrow \text{Dropout}(0.3) \rightarrow \text{Dense}(4,\text{softmax}).
+\]
+All models use softmax with categorical cross-entropy, correcting an earlier sigmoid+categorical pairing. There is no warm-start from old single-disease weights.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{images/diagrams/model_architectures.png}
+\caption{Three architectures scored under a matched four-class protocol (shared head for transfer models)}
+\label{fig:model-arch}
+\end{figure}
+
+\textbf{EfficientNetB3.} ImageNet backbone; Phase~2 unfreezes from layer 340 ($\sim$42.7\% of parameters).
+
+\textbf{DenseNet121.} ImageNet backbone; Phase~2 unfreezes from layer 300 ($\sim$42.8\%). BatchNorm remains frozen during fine-tuning.
+
+\textbf{Custom CNN.} Five-block stack (filters $32\rightarrow64\rightarrow64\rightarrow128\rightarrow256$) with BatchNorm, pooling, and dropout; four-class softmax head as a from-scratch baseline.
+
+\section{Training Protocol}
+
+\begin{table}[H]
+\centering
+\caption{Shared training hyperparameters and controls}
+\label{tab:method-hparams}
+\small
+\begin{tabular}{@{}P{4.5cm}P{7.5cm}@{}}
+\toprule
+\HeaderRow \Head{Setting} & \Head{Value} \\
+\midrule
+Shared seed & 1337 \\
+\ZebraRow Batch size & 32 (identical across models when resources allow) \\
+Phase-1 learning rate & $1\times10^{-4}$ (Adam), backbone frozen \\
+\ZebraRow Phase-2 learning rate & $1\times10^{-5}$ (Adam), partial unfreeze for transfer models \\
+Loss & Categorical cross-entropy with class weights \\
+\ZebraRow Output & 4-way softmax \\
+Test set & Never used for training or model selection \\
+\ZebraRow Artefacts & \texttt{weights/*\_4class.keras}, \texttt{training/runs/*.json} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.7cm]
+\node[diag start, minimum width=3.2cm] (p1) {Phase 1\\Frozen backbone\\LR $1\times10^{-4}$};
+\node[diag step, right=of p1, minimum width=3.4cm] (p2) {Phase 2\\Partial unfreeze $\sim$43\%\\LR $1\times10^{-5}$};
+\node[diag out, right=of p2, minimum width=2.8cm] (w) {Save\\4-class .keras};
+
+\draw[diag arrow] (p1) -- (p2);
+\draw[diag arrow] (p2) -- (w);
+
+\node[diag label, below=0.2cm of p1] {train head only};
+\node[diag label, below=0.2cm of p2] {BN frozen; Adam};
+\node[diag label, below=0.2cm of w] {seed 1337; class weights};
+\end{tikzpicture}
+\caption{Two-phase transfer-learning protocol used for EfficientNetB3 and DenseNet121}
+\label{fig:train-phases}
+\end{figure}
+
+Callbacks include checkpointing, early stopping, and ReduceLROnPlateau. Models may be trained via \texttt{python training/train.py --model all}.
+
+\section{Evaluation Methodology}
+
+\path{training/evaluate.py} scores every model on the held-out test split: accuracy, balanced accuracy (mean recall), per-class precision/recall/F1, confusion matrices, cross-architecture comparison, and soft-voting ensemble metrics written to \path{training/results/comparison.md}. Soft voting averages probability vectors and takes argmax, preserving confidence that hard majority voting would discard.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.55cm and 0.5cm]
+\node[diag step, minimum width=2.3cm] (test) {Held-out\\test set};
+\node[diag model, right=of test] (m1) {EffNetB3};
+\node[diag model, below=of m1] (m2) {DenseNet};
+\node[diag model, below=of m2] (m3) {CNN};
+\node[diag step, right=1.2cm of m2, minimum width=2.6cm] (met) {Per-class\\P / R / F1 + CM};
+\node[diag out, right=of met, minimum width=2.4cm] (ens) {Soft-vote\\ensemble};
+\node[diag gate, below=1.0cm of met, minimum width=2.8cm] (leak) {Leakage probe\\(source accuracy)};
+
+\draw[diag arrow] (test.east) -- ++(0.35,0) |- (m1.west);
+\draw[diag arrow] (test.east) -- ++(0.35,0) |- (m2.west);
+\draw[diag arrow] (test.east) -- ++(0.35,0) |- (m3.west);
+\draw[diag arrow] (m1.east) -- ++(0.4,0) |- (met.west);
+\draw[diag arrow] (m2) -- (met);
+\draw[diag arrow] (m3.east) -- ++(0.4,0) |- (met.west);
+\draw[diag arrow] (met) -- (ens);
+\draw[diag arrow] (met) -- (leak);
+\end{tikzpicture}
+\caption{Evaluation flow: matched test scoring, ensemble soft voting, and source-leakage probe}
+\label{fig:eval-flow}
+\end{figure}
+
+\texttt{training/leakage\_probe.py} trains a classifier to predict dataset source versus a majority baseline. Near-baseline performance is desirable; near-perfect source prediction would warn that TB or COVID-19 could be inferred from acquisition cues. COVID-19 recall remains the critical weak point because of small support.
+
+\section{Application Integration Workflow}
+
+Upload (PNG/JPG/JPEG, max 16\,MB) $\rightarrow$ three-stage chest X-ray gate (or Analyse anyway) $\rightarrow$ \texttt{predict\_all()} $\rightarrow$ soft ensemble $\rightarrow$ UI with per-model bars, verdict, and agreement. Weights must be four-wide; legacy \texttt{.h5} files are rejected. Operational sequence: \path{build_manifest.py} $\rightarrow$ \path{train.py --model all} $\rightarrow$ \path{evaluate.py} $\rightarrow$ optional \path{leakage_probe.py} $\rightarrow$ \path{Frontend/app.py}.
+
+\section{Methodological Validity and Limitations}
+
+The design is sound insofar as the task is unambiguous, leakage controls exist, architectures are matched, metrics include per-class recall, and deployment uses training-consistent preprocessing. Known limitations: public datasets are small; COVID recall is statistically unstable; four-class accuracy is expected to be lower than historical binary figures; single-source TB/COVID classes still invite shortcutting (hence the probe); the system is not a clinical device; Grad-CAM and multi-centre validation are future work.
+
+\section{Summary}
+
+The methodology converts three historically separate detectors into a unified, leakage-aware, multi-architecture four-class benchmark with ensemble deployment. Comparative claims are authenticated by shared data and protocol, while evaluation remains transparent about dataset limits and non-diagnostic intent.

@@ -1,0 +1,36 @@
+\chaptertitlepage{Future Recommendations}
+
+\section{Conclusion}
+
+This project achieved its aim of a research-grade chest X-ray multi-disease classification system that benchmarks EfficientNetB3, DenseNet121, and a custom CNN on a unified four-class dataset (Normal, Tuberculosis, COVID-19, Pneumonia) and deploys them through an ensemble-capable Flask application. On the held-out test set ($n=482$), DenseNet121 was the strongest single model (90.87\% accuracy; 89.14\% balanced accuracy), and soft-voting ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy. Shared manifests, patient-grouped splits, content-hash deduplication, matched fine-tuning fractions, per-class metrics, and a leakage probe (88.17\% vs 49.79\% baseline) authenticate comparative claims. The system remains a research demonstration on public data and is not a clinical diagnostic device.
+
+\section{Recommendations}
+
+\begin{itemize}
+    \item Always report per-class recall for minority diseases such as COVID-19.
+    \item Keep patient-grouped splits in any dataset extension.
+    \item Do not compare old binary metrics to four-class metrics without clear historical labelling.
+    \item Use the leakage probe whenever heterogeneous public sets are merged.
+\end{itemize}
+
+\section{Future Enhancements}
+
+\begin{itemize}
+    \item Additional verified COVID data and multi-centre validation.
+    \item Grad-CAM or related explainability overlays.
+    \item DICOM support and PACS-oriented integration paths.
+    \item Calibration (e.g., temperature scaling) and per-class decision thresholds.
+    \item Active learning or semi-supervised expansion.
+    \item Mobile/cloud deployment with authentication and audit logs.
+    \item Optional additional backbones (e.g., VGG19) under the same harness.
+\end{itemize}
+
+\section{Summary of Contributions}
+
+\begin{enumerate}
+    \item A unified four-class CXR benchmark from three public sources with leakage controls.
+    \item A fair three-architecture training harness (shared head; matched fine-tune fraction).
+    \item An evaluation suite with precision/recall/F1, balanced accuracy, ensemble scoring, and a leakage probe.
+    \item A Flask multi-model demo with soft voting, agreement display, and a measured X-ray gate.
+    \item Documentation enabling reproducibility (manifest, scripts, and status notes).
+\end{enumerate}

@@ -1,0 +1,70 @@
+\appendix
+
+\chaptertitlepage{Dataset Details}
+\label{app:datasets}
+
+\section{Dataset Overview}
+
+The unified corpus uses four mutually exclusive classes: Normal, Tuberculosis, COVID-19, and Pneumonia. In the reported run, COVID-19 has 130 images after content-hash deduplication; Normal and Pneumonia are capped at 1{,}200 with inverse-frequency class weights during training.
+
+\subsection{Data Sources}
+
+\begin{table}[H]
+\centering
+\caption{Dataset sources, paths, and known public links}
+\label{tab:app-datasets}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}P{2.6cm}P{3.4cm}P{3.2cm}P{3.0cm}@{}}
+\toprule
+\HeaderRow \Head{Dataset} & \Head{Local path} & \Head{Supplies} & \Head{Public link} \\
+\midrule
+TB Chest X-Ray & \path{TB_Chest_Radiography_Database/} & TB, Normal & Kaggle TB CXR corpus \\
+\ZebraRow Covid19-dataset & \path{DenseNet121/Covid19-dataset/} & COVID-19, Normal, Pneumonia & Local COVID folder (317 images on checkout) \\
+Chest X-Ray Pneumonia & \path{pneumonia_detection/data/chest_xray/} & Pneumonia, Normal & Kaggle CXR pneumonia corpus \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+On the verified evaluation export, the selected unified manifest contains 3{,}227 images with train, validation, and test sizes of 2{,}260, 485, and 482 respectively, and COVID-19 at 130 images after deduplication. Viral Pneumonia from the COVID source is merged into Pneumonia. Class$\times$source and split tables are reported in Chapter~5.
+
+\subsection{Preprocessing and Splits}
+
+Patient-grouped train/validation/test splits (seed 1337), content-hash deduplication, shared geometric augmentation, and architecture-specific input sizes/preprocessing are detailed in Chapter~3.
+
+\chaptertitlepage{Model Architecture Summaries}
+\label{app:architectures}
+
+\section{Model Training and Implementation}
+
+\begin{itemize}
+    \item EfficientNetB3 / DenseNet121: ImageNet base plus shared head (GAP, Dropout, Dense 256, Dropout, Softmax 4); Phase~1 frozen; Phase~2 unfreeze from layers 340 / 300 ($\sim$43\%).
+    \item Custom CNN: five-block stack ending in Softmax(4).
+    \item Scripts: \path{training/build_manifest.py}, \path{common.py}, \path{models.py}, \path{train.py}, \path{evaluate.py}, \path{leakage_probe.py}; frontend under \path{Frontend/}; weights \path{efficientnetb3_4class.keras}, \path{densenet121_4class.keras}, \path{cnn_4class.keras}.
+    \item Run order: build manifest, then train all, then evaluate, optional leakage probe, then \path{Frontend/app.py}. A portable inference bundle under \path{xray-classifier-portable/} already ships the three \texttt{*.keras} weight files for demo without retraining on the local machine.
+\end{itemize}
+
+\chaptertitlepage{Alignment with Sustainable Development Goals (SDGs)}
+\label{app:sdgs}
+
+\begin{table}[H]
+\centering
+\caption{Potential educational and research alignment with SDGs (non-clinical)}
+\label{tab:app-sdgs}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}cP{3.5cm}P{7.5cm}@{}}
+\toprule
+\HeaderRow \Head{No.} & \Head{SDG} & \Head{Contribution language} \\
+\midrule
+1 & SDG 3 Good Health and Well-being & Decision-support \emph{research} for respiratory screening accessibility, with explicit non-diagnostic limits. \\
+\ZebraRow 2 & SDG 4 Quality Education & Reproducible teaching artefact for medical AI methodology (fair splits, metrics literacy). \\
+3 & SDG 9 Industry, Innovation and Infrastructure & Open software pipeline for multi-model CXR benchmarking. \\
+\ZebraRow 4 & SDG 10 Reduced Inequalities & Potential relevance to resource-limited screening contexts as \emph{future clinical research}---not a deployed medical device. \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Impact claims remain modest: this FYP is an educational research demonstration on public data.
