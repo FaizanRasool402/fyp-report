@@ -5,7 +5,7 @@
 
 \section{Dataset Overview}
 
-The unified corpus uses four mutually exclusive classes: Normal, Tuberculosis, COVID-19, and Pneumonia. In the reported run, COVID-19 has 130 images after content-hash deduplication; Normal and Pneumonia are capped at 1{,}200 with inverse-frequency class weights during training.
+The dataset has four mutually exclusive classes: Normal, Tuberculosis, COVID-19, and Pneumonia. In the reported run, COVID-19 has 130 images after deduplication by content hash, Normal and Pneumonia are capped at 1{,}200 images each, and training uses inverse-frequency class weights.
 
 \subsection{Data Sources}
 
@@ -27,11 +27,11 @@ Chest X-Ray Pneumonia & \path{pneumonia_detection/data/chest_xray/} & Pneumonia,
 \end{adjustbox}
 \end{table}
 
-On the verified evaluation export, the selected unified manifest contains 3{,}227 images with train, validation, and test sizes of 2{,}260, 485, and 482 respectively, and COVID-19 at 130 images after deduplication. Viral Pneumonia from the COVID source is merged into Pneumonia. Class$\times$source and split tables are reported in Chapter~5.
+The manifest used for evaluation has 3{,}227 images: 2{,}260 for training, 485 for validation, and 482 for testing, with 130 COVID-19 images after deduplication. Viral Pneumonia images from the COVID source are counted as Pneumonia. Chapter~5 gives the full split and class-by-source tables.
 
 \subsection{Preprocessing and Splits}
 
-Patient-grouped train/validation/test splits (seed 1337), content-hash deduplication, shared geometric augmentation, and architecture-specific input sizes/preprocessing are detailed in Chapter~3.
+Chapter~3 describes the patient-grouped splits (seed 1337), deduplication by content hash, the shared geometric augmentation, and each architecture's input size and preprocessing.
 
 \chaptertitlepage{Model Architecture Summaries}
 \label{app:architectures}
@@ -67,4 +67,4 @@ Patient-grouped train/validation/test splits (seed 1337), content-hash deduplica
 \end{adjustbox}
 \end{table}
 
-Impact claims remain modest: this FYP is an educational research demonstration on public data.
+We keep these claims modest, since this FYP is an educational research demonstration built on public data.

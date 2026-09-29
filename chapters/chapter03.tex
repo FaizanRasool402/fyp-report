@@ -31,11 +31,11 @@ This chapter describes how we built and evaluated the system. Besides classifyin
 
 \section{From Single-Disease Models to a Unified Benchmark}
 
-The first version of this project used three separate models with incompatible label sets: binary tuberculosis, multi-class COVID-19 screening (which at the time included Viral Pneumonia), and binary pneumonia. We could not compare them properly, since a difference in performance might come from the datasets and say nothing about the architectures. We therefore reframed the problem as a single four-class task and trained all three architectures on the same merged dataset, with the same patient-grouped splits, the same classification head for the transfer models, and the same training budget. The locked label order is Normal, Tuberculosis, COVID-19, Pneumonia. Viral Pneumonia from COVID sources is merged into Pneumonia because the Kaggle pneumonia corpus mixes bacterial and viral cases and cannot be separated retrospectively.
+The first version of this project used three separate models with incompatible label sets: binary tuberculosis, multi-class COVID-19 screening (which at the time included Viral Pneumonia), and binary pneumonia. We could not compare them properly, since a difference in performance might come from the datasets and say nothing about the architectures. We therefore reframed the problem as a single four-class task and trained all three architectures on the same merged dataset, with the same patient-grouped splits, the same classification head for the transfer models, and the same training budget. The class order is fixed as Normal, Tuberculosis, COVID-19, Pneumonia. Images labelled Viral Pneumonia in the COVID sources are counted as Pneumonia, because the Kaggle pneumonia dataset mixes bacterial and viral cases and there is no way to separate them after the fact.
 
 \section{Data Collection and Unified Manifest}
 
-No new private clinical datasets were collected. A builder script (\path{training/build_manifest.py}) merges three public sources into \path{training/manifest.csv} with image paths, class labels, patient identifiers, source tags, and train/validation/test assignments.
+We did not collect any new clinical data. A builder script (\path{training/build_manifest.py}) merges three public datasets into \path{training/manifest.csv}, which records each image's path, class, patient identifier, source dataset, and split (train, validation, or test).
 
 \subsection{Source Datasets}
 
@@ -82,16 +82,18 @@ Chest X-Ray Pneumonia (Kaggle) & \path{pneumonia_detection/data/chest_xray/} & P
 
 \subsection{Design Rules for Honest Splits}
 
+Six rules keep the splits honest:
+
 \begin{enumerate}
-    \item \textbf{Content-hash deduplication.} Byte-identical images are removed so duplicates cannot span train and test.
-    \item \textbf{Patient-grouped splitting.} Images from one patient never appear in more than one of train, validation, or test.
-    \item \textbf{Fully qualified patient IDs.} Plain stems such as \texttt{0101.jpeg} collide across COVID folders; identifiers are path-qualified and grouped globally.
-    \item \textbf{Multi-source Normal and Pneumonia.} Both classes draw from more than one corpus to reduce scanner/dataset shortcutting.
-    \item \textbf{Class-size capping with class weights.} COVID-19 remains $130$ after deduplication; other classes were capped at 1{,}200 in the reported run (\texttt{--cap 1200}); residual imbalance uses inverse-frequency weights (COVID weight $\approx$ 2.851).
-    \item \textbf{Class$\times$source inspection.} Training proceeds only after confirming Normal and Pneumonia are multi-source.
+    \item \textbf{Content-hash deduplication.} We remove byte-identical images, so the same file cannot end up in both the training and test sets.
+    \item \textbf{Patient-grouped splitting.} All images from one patient go into the same split, whether that is train, validation, or test.
+    \item \textbf{Fully qualified patient IDs.} Bare file names such as \texttt{0101.jpeg} repeat across the COVID folders, so we qualify each identifier with its path and group patients across the whole dataset.
+    \item \textbf{Multi-source Normal and Pneumonia.} Both classes draw on more than one dataset, which makes it harder for a model to tell classes apart by scanner or dataset style.
+    \item \textbf{Class-size capping with class weights.} COVID-19 has only $130$ images after deduplication. We capped the other classes at 1{,}200 in the reported run (\texttt{--cap 1200}) and handled the remaining imbalance with inverse-frequency class weights (COVID-19 weight $\approx$ 2.851).
+    \item \textbf{Class$\times$source inspection.} Before training, we check a class-by-source table to confirm that Normal and Pneumonia really do come from several datasets.
 \end{enumerate}
 
-All images are from public research corpora. The system is a research demonstration and architecture benchmark, not a clinically validated diagnostic device.
+Every image comes from a public research dataset. The system is a research demonstration and a benchmark of architectures; it has not been clinically validated and is not a diagnostic device.
 
 \section{Preprocessing and Data Augmentation}
 
@@ -113,7 +115,7 @@ Custom CNN & $150\times150\times3$ & Divide by 255 \\
 \end{tabular}
 \end{table}
 
-Training and inference share the same decode and bilinear resize path. An earlier nearest-neighbour resize at inference versus bilinear training was corrected because it altered a large fraction of pixel values (train--serve skew).
+Training and inference decode and resize images the same way, with bilinear interpolation. An earlier version resized with nearest-neighbour at inference but bilinear during training. That mismatch (train--serve skew) changed a large fraction of pixel values, so we fixed it.
 
 \begin{figure}[H]
 \centering
@@ -124,15 +126,15 @@ Training and inference share the same decode and bilinear resize path. An earlie
 
 \subsection{Augmentation and Class Imbalance}
 
-Geometric augmentation (rotation, translation, zoom, horizontal flip within controlled ranges) is shared across architectures through the common data pipeline. Oversampling of pathological images was avoided; inverse-frequency class weights with categorical cross-entropy emphasise minority-class errors instead.
+All three architectures get the same geometric augmentation from the shared data pipeline: rotation, translation, zoom, and horizontal flips, each within a set range. We did not oversample the disease images. Instead, inverse-frequency class weights in the categorical cross-entropy loss make mistakes on the smaller classes cost more.
 
 \section{Model Architectures and Shared Head}
 
-Models are built in \texttt{training/models.py}. Transfer models use an identical head so the benchmark measures the backbone:
+The models are defined in \texttt{training/models.py}. Both transfer models use the same classification head, so any difference between them comes from the backbone:
 \[
 \text{GAP} \rightarrow \text{Dropout}(0.5) \rightarrow \text{Dense}(256,\text{ReLU}) \rightarrow \text{Dropout}(0.3) \rightarrow \text{Dense}(4,\text{softmax}).
 \]
-All models use softmax with categorical cross-entropy, correcting an earlier sigmoid+categorical pairing. There is no warm-start from old single-disease weights.
+Every model ends in a softmax layer trained with categorical cross-entropy, which fixes an earlier bug where a sigmoid output was paired with that loss. None of the models start from the old single-disease weights.
 
 \begin{figure}[H]
 \centering
@@ -141,11 +143,7 @@ All models use softmax with categorical cross-entropy, correcting an earlier sig
 \label{fig:model-arch}
 \end{figure}
 
-\textbf{EfficientNetB3.} ImageNet backbone; Phase~2 unfreezes from layer 340 ($\sim$42.7\% of parameters).
-
-\textbf{DenseNet121.} ImageNet backbone; Phase~2 unfreezes from layer 300 ($\sim$42.8\%). BatchNorm remains frozen during fine-tuning.
-
-\textbf{Custom CNN.} Five-block stack (filters $32\rightarrow64\rightarrow64\rightarrow128\rightarrow256$) with BatchNorm, pooling, and dropout; four-class softmax head as a from-scratch baseline.
+EfficientNetB3 and DenseNet121 both start from ImageNet weights. In Phase~2, EfficientNetB3 is unfrozen from layer 340 onward ($\sim$42.7\% of its parameters) and DenseNet121 from layer 300 ($\sim$42.8\%), and DenseNet121's BatchNorm layers stay frozen during fine-tuning. The custom CNN is our from-scratch baseline: five convolutional blocks (filters $32\rightarrow64\rightarrow64\rightarrow128\rightarrow256$) with BatchNorm, pooling, and dropout, ending in a four-class softmax head.
 
 \section{Training Protocol}
 
@@ -188,11 +186,11 @@ Test set & Never used for training or model selection \\
 \label{fig:train-phases}
 \end{figure}
 
-Callbacks include checkpointing, early stopping, and ReduceLROnPlateau. Models may be trained via \texttt{python training/train.py --model all}.
+Training uses checkpointing, early stopping, and ReduceLROnPlateau callbacks. One command trains all three models: \texttt{python training/train.py --model all}.
 
 \section{Evaluation Methodology}
 
-\path{training/evaluate.py} scores every model on the held-out test split: accuracy, balanced accuracy (mean recall), per-class precision/recall/F1, confusion matrices, cross-architecture comparison, and soft-voting ensemble metrics written to \path{training/results/comparison.md}. Soft voting averages probability vectors and takes argmax, preserving confidence that hard majority voting would discard.
+The script \path{training/evaluate.py} scores every model on the held-out test split. It reports accuracy, balanced accuracy (the mean of per-class recall), per-class precision, recall, and F1, confusion matrices, a comparison across architectures, and soft-voting ensemble metrics, and writes them to \path{training/results/comparison.md}. Soft voting averages the models' probability vectors and picks the class with the highest average. Unlike a hard majority vote, it keeps track of how confident each model was.
 
 \begin{figure}[H]
 \centering
@@ -218,11 +216,11 @@ Callbacks include checkpointing, early stopping, and ReduceLROnPlateau. Models m
 \label{fig:eval-flow}
 \end{figure}
 
-\texttt{training/leakage\_probe.py} trains a classifier to predict dataset source versus a majority baseline. Near-baseline performance is desirable; near-perfect source prediction would warn that TB or COVID-19 could be inferred from acquisition cues. COVID-19 recall remains the critical weak point because of small support.
+The leakage probe (\texttt{training/leakage\_probe.py}) trains a classifier to predict which dataset each image came from and compares it with a majority-class baseline. Ideally it does little better than the baseline. If it could name the source almost perfectly, a model might be recognising TB or COVID-19 from how the images were acquired instead of from the disease itself. COVID-19 recall is the weakest point of the evaluation, because the class has so few test images.
 
 \section{Application Integration Workflow}
 
-Upload (PNG/JPG/JPEG, max 16\,MB) $\rightarrow$ three-stage chest X-ray gate (or Analyse anyway) $\rightarrow$ \texttt{predict\_all()} $\rightarrow$ soft ensemble $\rightarrow$ UI with per-model bars, verdict, and agreement. Weights must be four-wide; legacy \texttt{.h5} files are rejected. Operational sequence: \path{build_manifest.py} $\rightarrow$ \path{train.py --model all} $\rightarrow$ \path{evaluate.py} $\rightarrow$ optional \path{leakage_probe.py} $\rightarrow$ \path{Frontend/app.py}.
+In the application, the user uploads a PNG, JPG, or JPEG file of up to 16\,MB. The image goes through the three-stage chest X-ray gate, unless the user chooses Analyse anyway. \texttt{predict\_all()} then runs every model on it, the soft-voting ensemble combines their outputs, and the results page shows each model's probability bars, the verdict, and whether the models agree. Weight files must output four classes, and legacy \texttt{.h5} files are rejected. To reproduce the whole system, run \path{build_manifest.py}, then \path{train.py --model all}, then \path{evaluate.py}, optionally \path{leakage_probe.py}, and finally \path{Frontend/app.py} to start the application.
 
 \section{Methodological Validity and Limitations}
 

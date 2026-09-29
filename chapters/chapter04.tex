@@ -1,10 +1,10 @@
 \chaptertitlepage{System Design}
 
-This chapter translates the methodology into a layered software system: presentation (HTML/CSS/Jinja), application (Flask routes), inference service (lazy loading, locking, ensemble), model artefacts (\texttt{weights/}), and an offline training pipeline under \texttt{training/}.
+This chapter describes the software built on that methodology. It has five layers: the presentation layer (HTML, CSS, and Jinja templates), the application layer (Flask routes), an inference service that loads models on first use, guards them with a lock, and computes the ensemble, the model files in \texttt{weights/}, and an offline training pipeline in \texttt{training/}.
 
 \section{System Architecture}
 
-The inference path is layered as follows: user upload is received by Flask routes, validated by the chest X-ray gate, scored by \texttt{predict\_all()} in \texttt{predictors.py} across EfficientNetB3, DenseNet121, and the Custom CNN, then aggregated by soft-voting ensemble before the result page shows probability bars and agreement status.
+When a user uploads an image, a Flask route receives it and the chest X-ray gate checks it. \texttt{predict\_all()} in \texttt{predictors.py} then scores it with EfficientNetB3, DenseNet121, and the custom CNN, and the soft-voting ensemble combines their outputs. Finally, the results page shows the probability bars and whether the models agree.
 
 \begin{figure}[H]
 \centering
@@ -13,7 +13,7 @@ The inference path is layered as follows: user upload is received by Flask route
 \label{fig:sys-arch-flow}
 \end{figure}
 
-Every upload is scored by every trained four-class model under the locked label order Normal, Tuberculosis, COVID-19, Pneumonia. Soft voting averages probability vectors. Legacy single-disease \texttt{.h5} files are refused if the output width is not four; missing weights are reported without crashing the server.
+Every trained four-class model scores every upload, always with the class order Normal, Tuberculosis, COVID-19, Pneumonia, and soft voting averages their probability vectors. The server refuses old single-disease \texttt{.h5} files whose output is not four classes wide. If a weight file is missing, it reports the problem and keeps running.
 
 \begin{table}[H]
 \centering
@@ -57,14 +57,16 @@ Custom CNN & 4-class softmax & $150\times150$ & Flask ensemble \\
 
 \section{Tools and Technologies Used}
 
-Python (3.9+/3.11 recommended for modern TensorFlow), TensorFlow and Keras, OpenCV, Flask and Werkzeug, NumPy, scikit-learn (evaluation), Matplotlib and Seaborn (figures), HTML/CSS, and Git. Training prefers a capable GPU machine; CPU inference is possible but slower. Key folders: \path{training/}, \path{Frontend/}, \path{weights/}, and the three public dataset trees documented in Chapter~3.
+The system is written in Python (3.9 or later; 3.11 is recommended for current TensorFlow). It uses TensorFlow and Keras, OpenCV, Flask and Werkzeug, NumPy, scikit-learn for evaluation, Matplotlib and Seaborn for figures, HTML and CSS, and Git. Training is best done on a machine with a capable GPU. Inference also runs on a CPU, only more slowly. The main folders are \path{training/}, \path{Frontend/}, and \path{weights/}, along with the three public dataset folders described in Chapter~3.
 
 \section{Chest X-Ray Validation Gate}
 
+Before any model sees an upload, the gate checks it in three stages:
+
 \begin{enumerate}
-    \item \textbf{Monochrome/tint:} grayscale or single-tint films (blue-tinted displays allowed).
-    \item \textbf{Radiograph envelope:} intensity, entropy, midtones, aspect, symmetry, and related statistics; one violation forgiven.
-    \item \textbf{Anatomy veto:} reject only if both bright central-column cues and bilateral symmetry cues are absent.
+    \item \textbf{Monochrome or tint check.} The image must be grayscale or a single tint. Blue-tinted display captures are allowed.
+    \item \textbf{Radiograph envelope.} Statistics such as intensity, entropy, midtones, aspect ratio, and symmetry must look like those of a real radiograph. One violation is forgiven.
+    \item \textbf{Anatomy veto.} The image is rejected only if it lacks both the bright central-column cues and the left-right symmetry cues.
 \end{enumerate}
 
 \begin{figure}[H]
@@ -74,11 +76,11 @@ Python (3.9+/3.11 recommended for modern TensorFlow), TensorFlow and Keras, Open
 \label{fig:xray-gate}
 \end{figure}
 
-On a labelled set of 351 real radiographs versus 106 non-X-rays, the gate accepted 100\% of real films and rejected approximately 77\% of non-X-rays (previous monochrome-only gate $\sim$21\%). Rejection reasons are shown; Analyse anyway is protected against path traversal.
+We tested the gate on a labelled set of 351 real radiographs and 106 other images. It accepted all of the real radiographs and rejected about 77\% of the non-X-rays, where the earlier monochrome-only check rejected only about 21\%. When the gate rejects an image it tells the user why, and the Analyse anyway option is protected against path traversal.
 
 \section{Application Flow and User Interface}
 
-Home lists model readiness; the upload form accepts a radiograph; results show probability bars, class blurbs, ensemble verdict, agreement, and a forced-analysis warning when used. Figures~\ref{fig:web-upload-ui} and~\ref{fig:web-validation} show upload and rejection UI; Chapter~5 presents consensus result screenshots for TB, COVID-19, and pneumonia demos.
+The home page shows which models are ready and holds the upload form. The results page shows each model's probability bars, a short description of each class, the ensemble verdict, whether the models agree, and a warning when the user forced the analysis past the gate. Figures~\ref{fig:web-upload-ui} and~\ref{fig:web-validation} show the upload page and a gate rejection. Chapter~5 shows result pages for TB, COVID-19, and pneumonia examples on which all three models agreed.
 
 \begin{figure}[H]
 \centering
@@ -113,7 +115,7 @@ Shared constants & \texttt{training/common.py} & Class order, preprocess \\
 
 \section{Train/Serve Consistency}
 
-Inference mirrors training decode with bilinear resize and the same \texttt{preprocess\_input} or $/255$ rescale. The \texttt{CLASSES} index order is shared across training, evaluation, and the UI. Non-four-class weight files are refused.
+At inference, the application decodes and resizes images exactly as training did, with bilinear interpolation and the same \texttt{preprocess\_input} or $/255$ rescaling. Training, evaluation, and the user interface all take the class order from one shared \texttt{CLASSES} list, and the application refuses any weight file that does not output four classes.
 
 \section{Summary}
 

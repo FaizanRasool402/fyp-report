@@ -1,10 +1,10 @@
 \chaptertitlepage{Results and Discussion}
 
-This chapter reports measured results for the unified four-class system on the held-out test split of \path{training/manifest.csv}. All Accuracy, Precision, Recall, F1, confusion-matrix, and leakage-probe figures below are taken from verified evaluation exports (\path{training/results/comparison.md}, \path{results.json}, \path{ensemble.json}, \path{leakage_probe.json}, and run logs). Historical single-disease scores remain labelled as prior work and are not mixed into the four-class tables.
+This chapter reports how the four-class system performed on the held-out test split of \path{training/manifest.csv}. Every accuracy, precision, recall, F1, confusion-matrix, and leakage-probe figure comes from the evaluation exports (\path{training/results/comparison.md}, \path{results.json}, \path{ensemble.json}, \path{leakage_probe.json}) and the run logs. Scores from the earlier single-disease models appear only in their own section, labelled as prior work, and never in the four-class tables.
 
 \section{Experimental Setup}
 
-Evaluation used seed 1337, patient-grouped splits, and class order Normal, Tuberculosis, COVID-19, Pneumonia. The realised split sizes were 2{,}260 / 485 / 482 images (70.0\% / 15.0\% / 14.9\%). Models were trained with batch size 32 and inverse-frequency class weights (COVID-19 weight $\approx$ 2.851). The per-class selection cap used for this run was 1{,}200 (\texttt{--cap 1200}).
+We used seed 1337, patient-grouped splits, and the class order Normal, Tuberculosis, COVID-19, Pneumonia. The splits came out at 2{,}260 training, 485 validation, and 482 test images (70.0\%, 15.0\%, and 14.9\%). All models were trained with a batch size of 32 and inverse-frequency class weights (COVID-19 weight $\approx$ 2.851), and each class was capped at 1{,}200 images for this run (\texttt{--cap 1200}).
 
 \begin{table}[H]
 \centering
@@ -28,7 +28,7 @@ Evaluation & Per-model comparison: 9 Aug 2026; ensemble + leakage: 13 Sep 2026 \
 
 \section{Unified Manifest Summary}
 
-After MD5 content-hash deduplication the source pool contained 10{,}328 images (45 duplicates removed). COVID-19 fell from 137 to \textbf{130} images. The selected unified manifest contains \textbf{3{,}227} images. Viral Pneumonia from the COVID source is merged into Pneumonia (89 \texttt{covid\_db} images under Pneumonia).
+Removing duplicates by MD5 content hash took out 45 images and left a pool of 10{,}328. COVID-19 dropped from 137 to 130 images. The manifest selected from this pool has 3{,}227 images. The COVID source's Viral Pneumonia images are counted as Pneumonia, which is where the 89 \texttt{covid\_db} images in that class come from.
 
 \begin{table}[H]
 \centering
@@ -66,11 +66,11 @@ COVID-19 & 130 & 0 & 0 & 130 \\
 \end{tabular}
 \end{table}
 
-Normal and Pneumonia are multi-source by design; Tuberculosis and COVID-19 remain single-source and are therefore more exposed to source shortcutting (Section~\ref{sec:leakage}).
+Normal and Pneumonia draw on several datasets by design. Tuberculosis and COVID-19 each come from a single dataset, so a model could more easily learn to recognise them by their source (Section~\ref{sec:leakage}).
 
 \section{Four-Class Comparative Results}
 
-All models were scored on the same test split ($n=482$). Soft-voting ensemble metrics come from offline \texttt{ensemble.json} (mean class probabilities across the three models).
+All models were scored on the same test split ($n=482$). The ensemble figures come from the offline \texttt{ensemble.json}, which averages the three models' class probabilities.
 
 \begin{table}[H]
 \centering
@@ -91,9 +91,9 @@ Custom CNN & 90.25\% & 88.36\% & 0.813 & 0.884 & 0.835 \\
 \end{adjustbox}
 \end{table}
 
-Among single models, DenseNet121 leads on accuracy (90.87\%), balanced accuracy (89.14\%), and macro F1 (0.864). EfficientNetB3 records the highest single-model COVID-19 recall (89.47\%) but much lower COVID precision. The ensemble improves overall accuracy to 92.32\% and balanced accuracy to 93.07\%.
+DenseNet121 is the best single model on accuracy (90.87\%), balanced accuracy (89.14\%), and macro F1 (0.864). EfficientNetB3 has the highest COVID-19 recall of the three (89.47\%), but its COVID-19 precision is much lower. Combining the models lifts accuracy to 92.32\% and balanced accuracy to 93.07\%.
 
-Because COVID-19 has only 19 test images, \textbf{balanced accuracy} is preferred as the headline metric over plain accuracy.
+We treat balanced accuracy as the main metric. COVID-19 has only 19 test images, so plain accuracy would barely register how well the models handle it.
 
 \section{Per-Class Precision, Recall, and F1}
 
@@ -154,11 +154,11 @@ COVID-19 & 48.7\% & 94.7\% & 0.643 & 19 \\
 \end{tabular}
 \end{table}
 
-COVID-19 precision remains limited for every model (no single model exceeds $\sim$60\%). Ensemble COVID recall reaches 94.7\%, but the small support ($n=19$) means that figure has high sampling variance and must be quoted with that caveat.
+COVID-19 precision is low for every model, and no single model gets above about 60\%. The ensemble's COVID-19 recall of 94.7\% looks strong, but it rests on only 19 test cases ($n=19$) and could shift noticeably on a different sample, so it should always be quoted with that caveat.
 
 \section{Confusion Matrices}
 
-Class axis order is Normal, Tuberculosis, COVID-19, Pneumonia (rows = true, columns = predicted).
+In each matrix the rows are the true classes and the columns the predicted classes, both in the order Normal, Tuberculosis, COVID-19, Pneumonia.
 
 \begin{figure}[H]
 \centering
@@ -195,7 +195,7 @@ Class axis order is Normal, Tuberculosis, COVID-19, Pneumonia (rows = true, colu
 \section{Leakage Probe}
 \label{sec:leakage}
 
-A source-prediction probe (custom CNN @ $150\times150$, 8 epochs) scored \textbf{88.17\%} source accuracy against a majority-class baseline of \textbf{49.79\%} (+38.4 percentage points). The recorded verdict is \textbf{moderate}: datasets are partly separable by source, but not trivially near 100\%. Because Tuberculosis and COVID-19 are single-source, part of their recall could rest on scanner/processing cues; Normal and Pneumonia are multi-source and less exposed to that shortcut. This caveat should be read alongside the disease-classification tables.
+The probe is a custom CNN at $150\times150$, trained for 8 epochs to predict which dataset each image came from. It named the source correctly 88.17\% of the time, against a majority-class baseline of 49.79\%, a gap of 38.4 percentage points. We rate this as a moderate source signal: the datasets can partly be told apart by source, though far from perfectly. Because Tuberculosis and COVID-19 each come from a single dataset, part of their recall may rest on scanner or processing cues. Normal and Pneumonia come from several datasets and are less exposed to that shortcut. The disease results earlier in this chapter should be read with this caveat in mind.
 
 \section{Training Run Summary}
 
@@ -217,11 +217,11 @@ Custom CNN & 88.87\% & 0.354 & 20 & 36.8\,min \\
 \end{adjustbox}
 \end{table}
 
-Parameter counts were approximately 11.2\,M (EfficientNetB3), 7.3\,M (DenseNet121), and 1.25\,M (Custom CNN). EfficientNetB3's long wall-clock time reflects CPU-only training on the Mac host.
+The models have roughly 11.2\,M (EfficientNetB3), 7.3\,M (DenseNet121), and 1.25\,M (custom CNN) parameters. EfficientNetB3 took so long to train because the Mac we used had no GPU, so it trained on the CPU alone.
 
 \section{Deployed Interface Demonstrations}
 
-Figures~\ref{fig:tb-prediction}--\ref{fig:pneumonia-prediction} show the Flask UI returning consensus soft-voting verdicts with per-model probability bars. Offline ensemble metrics above match the same soft-voting definition used in evaluation.
+Figures~\ref{fig:tb-prediction} to~\ref{fig:pneumonia-prediction} show the Flask interface returning soft-voting verdicts on which all three models agree, with each model's probability bars. The application combines the models with the same soft-voting rule used in the offline evaluation above.
 
 \begin{figure}[H]
 \centering
@@ -271,7 +271,7 @@ Figures~\ref{fig:tb-prediction}--\ref{fig:pneumonia-prediction} show the Flask U
 
 \section{Historical Single-Disease Work}
 
-Prior binary results (EfficientNetB3 TB test accuracy 95.63\%; pneumonia CNN 92\% on 624 images; historical COVID validation near 0\% due to overfitting) are \textbf{not comparable} to the four-class figures in this chapter. They remain useful only as prior project context.
+Our earlier binary models scored 95.63\% test accuracy for TB (EfficientNetB3) and 92\% for pneumonia (custom CNN, on 624 test images). The old COVID-19 model overfitted so badly that its validation accuracy was near 0\%. These figures are \textbf{not comparable} with the four-class results in this chapter, and we include them only as background on how the project developed.
 
 \section{Implementation Status}
 
@@ -295,4 +295,4 @@ Frontend ensemble UI + gate & Complete \\
 
 \section{Summary of Findings}
 
-On the unified four-class test set ($n=482$), DenseNet121 is the strongest single backbone (90.87\% accuracy; 89.14\% balanced accuracy; macro F1 0.864), while soft-voting ensemble reaches 92.32\% accuracy and 93.07\% balanced accuracy. Pneumonia recall is high across models ($\ge$95\%). COVID-19 remains the difficult minority class: recall can be high (ensemble 94.7\%) while precision stays modest, reflecting only 19 COVID test images. The leakage probe shows moderate source signal (88.17\% vs 49.79\% baseline), so single-source TB/COVID results should be interpreted cautiously. The redesign met its goal: the three architectures were compared fairly on shared data, and the per-class metrics show how the minority class performs, which overall accuracy would have hidden.
+On the four-class test set ($n=482$), DenseNet121 is the strongest single backbone (90.87\% accuracy, 89.14\% balanced accuracy, macro F1 0.864), and the soft-voting ensemble does better still, with 92.32\% accuracy and 93.07\% balanced accuracy. Every model recognises pneumonia well, with recall of at least 95\%. COVID-19 is the hard class. Its recall can be high (94.7\% for the ensemble) while precision stays low, and with only 19 COVID-19 test images neither figure is stable. The leakage probe found a moderate source signal (88.17\% against a 49.79\% baseline), so the TB and COVID-19 results, which each come from one dataset, need cautious reading. The redesign met its goal: the three architectures were compared fairly on shared data, and the per-class metrics show how the minority class performs, which overall accuracy would have hidden.
