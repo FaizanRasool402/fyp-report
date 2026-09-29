@@ -1,6 +1,6 @@
 \chaptertitlepage{Methodology}
 
-This chapter presents the research methodology for a multi-architecture chest X-ray disease detection system. The objective is not only to classify respiratory conditions from radiographs, but also to enable a fair and reproducible comparison among three deep learning architectures trained under identical experimental conditions. The pipeline comprises dataset unification, preprocessing and augmentation, model design, training, evaluation with leakage analysis, and Flask deployment with ensemble inference.
+This chapter describes how we built and evaluated the system. Besides classifying chest X-rays, the methodology had to let us compare three deep learning architectures fairly and reproducibly, so all three are trained under the same conditions. The pipeline has six stages: merging the datasets, preprocessing and augmentation, model design, training, evaluation with a leakage check, and deployment in Flask with ensemble inference.
 
 \begin{figure}[H]
 \centering
@@ -31,7 +31,7 @@ This chapter presents the research methodology for a multi-architecture chest X-
 
 \section{From Single-Disease Models to a Unified Benchmark}
 
-An earlier version of this project used three siloed models on incompatible label spaces: binary tuberculosis, COVID-19 multi-class screening (historically including Viral Pneumonia), and binary pneumonia. Those models could not be compared rigorously, because performance differences might reflect dataset differences rather than architectural strength. The revised methodology converts the problem into a unified four-class classification task and trains all three architectures on the same merged dataset, the same patient-grouped splits, the same classification head design (for transfer models), and the same training budget. The locked label order is Normal, Tuberculosis, COVID-19, Pneumonia. Viral Pneumonia from COVID sources is merged into Pneumonia because the Kaggle pneumonia corpus mixes bacterial and viral cases and cannot be separated retrospectively.
+The first version of this project used three separate models with incompatible label sets: binary tuberculosis, multi-class COVID-19 screening (which at the time included Viral Pneumonia), and binary pneumonia. We could not compare them properly, since a difference in performance might come from the datasets and say nothing about the architectures. We therefore reframed the problem as a single four-class task and trained all three architectures on the same merged dataset, with the same patient-grouped splits, the same classification head for the transfer models, and the same training budget. The locked label order is Normal, Tuberculosis, COVID-19, Pneumonia. Viral Pneumonia from COVID sources is merged into Pneumonia because the Kaggle pneumonia corpus mixes bacterial and viral cases and cannot be separated retrospectively.
 
 \section{Data Collection and Unified Manifest}
 
@@ -226,8 +226,8 @@ Upload (PNG/JPG/JPEG, max 16\,MB) $\rightarrow$ three-stage chest X-ray gate (or
 
 \section{Methodological Validity and Limitations}
 
-The design is sound insofar as the task is unambiguous, leakage controls exist, architectures are matched, metrics include per-class recall, and deployment uses training-consistent preprocessing. Known limitations: public datasets are small; COVID recall is statistically unstable; four-class accuracy is expected to be lower than historical binary figures; single-source TB/COVID classes still invite shortcutting (hence the probe); the system is not a clinical device; Grad-CAM and multi-centre validation are future work.
+The comparison is valid because the task is clearly defined, leakage is controlled, the architectures are trained the same way, the metrics include per-class recall, and deployment uses the same preprocessing as training. It has known limits. The public datasets are small, and COVID-19 recall is statistically unstable. Four-class accuracy will be lower than the old binary figures. TB and COVID-19 each come from a single source, so a model could learn source cues instead of disease (which is why we run the leakage probe). The system is not a clinical device, and Grad-CAM and multi-centre validation are left for future work.
 
 \section{Summary}
 
-The methodology converts three historically separate detectors into a unified, leakage-aware, multi-architecture four-class benchmark with ensemble deployment. Comparative claims are authenticated by shared data and protocol, while evaluation remains transparent about dataset limits and non-diagnostic intent.
+We replaced three separate detectors with one four-class benchmark in which three architectures share the same data, splits, and training protocol, with leakage controls and ensemble deployment. Because the data and protocol are shared, differences between the models can be attributed to the architectures. The evaluation also states plainly what the datasets cannot show and that the system is not for diagnosis.
