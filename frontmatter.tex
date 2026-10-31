@@ -164,11 +164,9 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-Pulmonary diseases such as tuberculosis (TB), COVID-19, and pneumonia remain major causes of morbidity and mortality worldwide. Chest radiography is often the most accessible imaging modality for initial screening, yet specialist radiologists are scarce in many regions. Deep learning can assist screening workflows, but many student and demonstration systems train separate single-disease models on incompatible label spaces. Such designs prevent fair architecture comparison and prevent a single upload from receiving a coherent multi-disease assessment. Data leakage (patient overlap, duplicates) and train--serve preprocessing mismatches further undermine reported accuracy.
+Lung diseases such as tuberculosis (TB), COVID-19 and pneumonia are major causes of illness and death, and in many regions there are not enough radiologists to read chest X-rays quickly. Many student and demo systems train a separate model for each disease, so the models cannot be compared fairly and one image cannot get a single answer covering all diseases. This report presents an \textbf{AI Agent for Lung Disease Detection} that sorts chest X-rays into four classes: Normal, Tuberculosis, COVID-19 and Pneumonia. Three models, EfficientNetB3 and DenseNet121 (ImageNet transfer learning) and a custom CNN (trained from scratch), are trained on one shared dataset built from three public sources. Duplicate images are removed, the data is split by patient, class weights handle the small classes, and the transfer models share the same head and fine-tune about 43\% of their weights, so the comparison is fair.
 
-This report presents the design and implementation of an \textbf{AI Agent for Lung Disease Detection}: a research-grade chest X-ray system that classifies images into a locked four-class label space---Normal, Tuberculosis, COVID-19, and Pneumonia. Three architectures---EfficientNetB3 and DenseNet121 (ImageNet transfer learning) and a custom CNN (trained from scratch)---are trained on one shared manifest built by merging three public sources. The methodology applies content-hash deduplication, patient-grouped splits, multi-source Normal and Pneumonia coverage, class-size capping with inverse-frequency class weights, an identical classification head for transfer models, and matched fine-tuning capacity (approximately 43\% of backbone weights unfrozen). Evaluation emphasises per-class precision, recall, and F1-score, balanced accuracy, confusion matrices, soft-voting ensemble metrics, and a source-leakage probe rather than headline accuracy alone.
-
-A Flask web application runs every available four-class model on each upload, applies a multi-stage chest X-ray validation gate (with an optional Analyse-anyway override), and presents per-model probability distributions together with an ensemble verdict and agreement status. Train and serve preprocessing are aligned (bilinear resize). On the held-out test split ($n=482$), DenseNet121 achieved 90.87\% accuracy and 89.14\% balanced accuracy, while soft-voting ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy; COVID-19 remained the minority class with limited precision despite high recall. A source-leakage probe scored 88.17\% against a 49.79\% majority baseline (moderate source signal). The system is a research demonstration on public datasets and is \textbf{not} a clinical diagnostic device.
+A Flask web app checks that each upload is a chest X-ray, runs all three models, and shows each model's probabilities together with a combined soft-voting verdict. On the held-out test set ($n=482$), DenseNet121 was the best single model with 90.87\% accuracy and 89.14\% balanced accuracy, while the ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy. COVID-19 had high recall but limited precision because it is the smallest class, and a source-leakage probe (88.17\% against a 49.79\% baseline) showed a moderate source signal. The system is a research demo built on public data and is \textbf{not} a clinical diagnostic device.
 
 % Acknowledgement
 \chapter*{Acknowledgement}
@@ -191,55 +189,55 @@ Finally, we would like to thank our family and friends for their moral support a
 \begin{table}[H]
 \centering
 \small
-\renewcommand{\arraystretch}{1.28}
-\arrayrulecolor{TableRule}
+\renewcommand{\arraystretch}{1.12}
+\arrayrulecolor{black}
 \begin{tabularx}{\textwidth}{%
-  |>{\columncolor{TableKey}\color{TableHeadText}\bfseries\RaggedRight\arraybackslash}p{3.2cm}%
+  |>{\bfseries\RaggedRight\arraybackslash}p{3.2cm}%
   |>{\color{black}\RaggedRight\arraybackslash}X|}
 \hline
 Project Title & AI Agent for Lung Disease Detection \\
 \hline
-Objective & To develop a research-grade chest X-ray multi-disease classification system that benchmarks three deep learning architectures on a unified four-class dataset and deploys them through an ensemble-capable web application. \\
+Objective & To build a research chest X-ray system that compares three deep learning models on one shared four-class dataset and makes them available through a web app that combines their results. \\
 \hline
 Main Contributions &
 \begin{minipage}[t]{\linewidth}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \begin{itemize}[leftmargin=*, nosep, topsep=0pt]
-    \item Fair 4-class architecture benchmark (shared manifest, head, and splits)
-    \item Ensemble CAD-style Flask demo with disagreement surfacing
-    \item Honest evaluation design (per-class metrics + leakage probe)
+    \item Fair comparison of three models on 4 classes (same manifest, head and splits)
+    \item Flask demo that combines all models and shows when they disagree
+    \item Honest evaluation (metrics for each class and a leakage probe)
 \end{itemize}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \end{minipage} \\
 \hline
-Limitation & Public small-data research demonstration only; not a clinical diagnostic device. \\
+Limitation & Research demo on small public datasets only; not a clinical diagnostic device. \\
 \hline
 Undertaken By &
 \begin{minipage}[t]{\linewidth}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \begin{itemize}[leftmargin=*, nosep, topsep=0pt]
     \item Muhammad Ehtisham Hanif (ECI-IT-21-064)
     \item Humair Hayat (ECI-IT-21-058)
     \item Faizan Rasool (ECI-IT-21-057)
 \end{itemize}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \end{minipage} \\
 \hline
 Supervised By & \supervisorname \\
 \hline
 Duration of Project &
 \begin{minipage}[t]{\linewidth}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \begin{itemize}[leftmargin=*, nosep, topsep=0pt]
     \item Start Date: October 2024
     \item End Date: September 2025
 \end{itemize}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \end{minipage} \\
 \hline
 Tools \& Technologies Used &
 \begin{minipage}[t]{\linewidth}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \begin{itemize}[leftmargin=*, nosep, topsep=0pt]
     \item \textbf{Programming Languages:} Python
     \item \textbf{Frameworks \& Libraries:} TensorFlow, Keras, Flask, OpenCV
@@ -247,7 +245,7 @@ Tools \& Technologies Used &
     \item \textbf{Development Tools:} Jupyter Notebook, Visual Studio Code
     \item \textbf{Hardware:} Standard CPU/GPU-based system used for training and testing
 \end{itemize}
-\vspace{0.08cm}
+\vspace{0.02cm}
 \end{minipage} \\
 \hline
 System Used & Windows-based development system utilizing CPU/GPU processing for model training and testing. \\
@@ -262,6 +260,88 @@ System Used & Windows-based development system utilizing CPU/GPU processing for 
 \listoffigures
 \clearpage
 \listoftables
+
+{\let\cleardoublepage\clearpage \chapter*{List of Abbreviations}}
+\addcontentsline{toc}{chapter}{List of Abbreviations}
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.0}
+\begin{tabular}{|P{3.2cm}|P{10.5cm}|}
+\hline
+\Head{Abbreviation} & \Head{Full Form} \\
+\hline
+AI & Artificial Intelligence \\
+\hline
+AUC & Area Under the Curve \\
+\hline
+BGR & Blue, Green, Red (OpenCV colour order) \\
+\hline
+BN & Batch Normalisation \\
+\hline
+CAD & Computer-Aided Diagnosis \\
+\hline
+CM & Confusion Matrix \\
+\hline
+CNN & Convolutional Neural Network \\
+\hline
+COVID-19 & Coronavirus Disease 2019 \\
+\hline
+CPU & Central Processing Unit \\
+\hline
+CSS & Cascading Style Sheets \\
+\hline
+CXR & Chest X-Ray \\
+\hline
+DICOM & Digital Imaging and Communications in Medicine \\
+\hline
+F1 & F1-score (harmonic mean of precision and recall) \\
+\hline
+FR & Functional Requirement \\
+\hline
+FYP & Final Year Project \\
+\hline
+GAP & Global Average Pooling \\
+\hline
+GPU & Graphics Processing Unit \\
+\hline
+Grad-CAM & Gradient-weighted Class Activation Mapping \\
+\hline
+HTML & HyperText Markup Language \\
+\hline
+JPEG / JPG & Joint Photographic Experts Group (image format) \\
+\hline
+LR & Learning Rate \\
+\hline
+MD5 & Message Digest 5 (hash algorithm) \\
+\hline
+NFR & Non-Functional Requirement \\
+\hline
+NIH & National Institutes of Health \\
+\hline
+P / R & Precision / Recall \\
+\hline
+PNG & Portable Network Graphics \\
+\hline
+ReLU & Rectified Linear Unit \\
+\hline
+RGB & Red, Green, Blue \\
+\hline
+RT-PCR & Reverse Transcription Polymerase Chain Reaction \\
+\hline
+SDG & Sustainable Development Goal \\
+\hline
+TB & Tuberculosis \\
+\hline
+UI & User Interface \\
+\hline
+VGG & Visual Geometry Group (network family) \\
+\hline
+WHO & World Health Organization \\
+\hline
+\end{tabular}
+\end{center}
+
+\clearpage
 
 % Main matter (arabic numerals)
 \mainmatter

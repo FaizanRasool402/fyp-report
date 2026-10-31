@@ -2,42 +2,42 @@
 
 \section{Motivation}
 
-Respiratory diseases represent one of the most critical global health challenges of the modern era. The World Health Organization estimates that lower respiratory infections remain among the top ten causes of death worldwide, with tuberculosis alone responsible for over 1.5 million deaths annually. Conditions such as pneumonia, COVID-19, and acute respiratory infections affect patients across all age groups, with children under five and elderly populations facing particularly high risk of severe outcomes. Beyond mortality, untreated pulmonary disease imposes substantial economic and social costs through hospitalisation, lost productivity, and late-stage care---especially in low- and middle-income countries where diagnostic infrastructure is weakest.
+Lung diseases are still one of the biggest health problems in the world. According to the World Health Organization, lower respiratory infections are among the top ten causes of death, and tuberculosis alone kills more than 1.5 million people every year~\cite{who2023}. Pneumonia, COVID-19 and other respiratory infections affect people of all ages, but young children (under five) and older people are at the highest risk of serious illness. These diseases also cost a lot in hospital care, lost work and late treatment. The burden is heaviest in low- and middle-income countries, where testing facilities are weakest.
 
-Chest radiography is often the most widely available and cost-effective imaging modality for initial pulmonary assessment. It can be performed rapidly, including at bedside with portable units, and frequently shows characteristic patterns such as consolidation, cavitation, or ground-glass opacity. Yet interpretation still requires trained radiologists who are unevenly distributed. In many rural and high-burden settings, delayed reading of chest X-rays slows triage, isolation, and treatment decisions for TB, COVID-19, and pneumonia alike.
+A chest X-ray is usually the cheapest and most easily available scan for checking the lungs. It can be taken quickly, even at the bedside with a portable machine, and it often shows typical signs such as consolidation, cavities or ground-glass opacity. The problem is that someone still has to read the image, and trained radiologists are not available everywhere. In many rural and high-burden areas, X-rays wait a long time before anyone reports on them. This delays triage, isolation and treatment for TB, COVID-19 and pneumonia.
 
-Deep learning, particularly convolutional neural networks with transfer learning from ImageNet, has shown strong performance on well-defined chest X-ray screening tasks. CNNs learn hierarchical visual features without handcrafted descriptors and can flag suspicious cases for priority review. However, many student and demonstration systems still train separate models for separate diseases on incompatible label spaces. Those siloed designs prevent fair architecture comparison and force users to pre-select a suspected condition before seeing other possibilities. Engineering choices---which backbone to deploy, how to validate uploads, how to report minority-class recall---should be evidence-based rather than anecdotal.
+Deep learning has done well on clearly defined chest X-ray screening tasks, especially convolutional neural networks (CNNs) that start from ImageNet weights~\cite{deng2009}. A CNN learns useful image features on its own, without hand-made descriptors, and can flag suspicious cases so they are looked at first. Still, many student and demo systems train a separate model for each disease, each with its own labels. With that setup the models cannot be compared fairly, and the user has to guess the disease before uploading an image. Decisions such as which model to deploy, how to check uploads and how to report results for small classes should be based on evidence, not guesswork.
 
-This project therefore motivates a unified workflow: one four-class label space, three architectures trained under matched conditions, transparent metrics including per-class recall and a leakage probe, and a single web application that returns multi-model opinions with an ensemble verdict. The goal is not to replace radiologists, but to provide a reproducible research demonstration of multi-disease chest X-ray classification with honest evaluation and safer input handling.
+For these reasons, this project uses one shared workflow. There is one set of four labels, three models trained under the same conditions, clear metrics (including recall for each class and a leakage probe), and a single web app that shows the opinion of every model along with a combined verdict. The aim is not to replace radiologists. The aim is a research demo of multi-disease chest X-ray classification that can be repeated, is evaluated honestly, and handles uploads more safely.
 
 \section{Problem Statement}
 
-Existing demonstration systems often train separate models for separate diseases on incompatible label spaces. This prevents fair comparison of architectures and prevents a single upload from receiving a coherent multi-disease assessment. Data leakage (patient overlap across splits, duplicate files) and train--serve preprocessing mismatch further undermine reported accuracy. Weak input validation may also allow non-radiograph images into the inference path.
+Many demo systems train separate models for separate diseases, each with different labels. Because of this, the models cannot be compared fairly, and one uploaded image cannot get a single, consistent answer across all diseases. Reported accuracy is also often too optimistic because of data leakage (the same patient or the same file in both training and test data) or because images are processed differently during training and in the app. On top of this, weak input checks can let images that are not X-rays reach the model.
 
-\textbf{Problem:} Design and implement a reproducible multi-architecture system that classifies chest X-rays into Normal, Tuberculosis, COVID-19, or Pneumonia under shared data and splits, with transparent metrics and a usable web interface that includes input validation and ensemble aggregation.
+\textbf{Problem:} Design and build a repeatable system that uses several models to classify chest X-rays as Normal, Tuberculosis, COVID-19 or Pneumonia. All models should use the same data and splits, report clear metrics, and be available through an easy web interface that checks the input and combines the model outputs.
 
 \begin{itemize}
-    \item Radiologist scarcity and workload limit timely CXR interpretation in many settings.
-    \item Single-disease models on separate datasets are incomparable and clinically fragmented at the user interface.
-    \item A research-grade solution must control leakage, align train/serve preprocessing, and report minority-class performance honestly---especially for scarce COVID-19 samples.
+    \item There are not enough radiologists, and their workload delays the reading of chest X-rays in many places.
+    \item Single-disease models trained on separate datasets cannot be compared, and they split the user's work across different tools.
+    \item A proper research solution has to prevent leakage, process images the same way in training and in the app, and report results for small classes honestly, especially COVID-19, which has very few images.
 \end{itemize}
 
 \section{Aim and Objectives}
 
 \textbf{Aim:}
 \begin{itemize}
-    \item To develop a research-grade chest X-ray multi-disease classification system that benchmarks three deep learning architectures on a unified four-class dataset and deploys them through an ensemble-capable web application.
+    \item To build a research chest X-ray system that compares three deep learning models on one shared four-class dataset and makes them available through a web app that can combine their results.
 \end{itemize}
 
 \textbf{Objectives:}
 \begin{enumerate}
-    \item Merge three public CXR sources into a unified 4-class manifest with deduplication and patient-grouped splits.
-    \item Implement EfficientNetB3, DenseNet121, and a custom CNN with a matched training protocol and shared classification head (for transfer models).
-    \item Train and evaluate with per-class precision, recall, F1, balanced accuracy, confusion matrices, and a source-leakage probe.
-    \item Build a Flask application that runs all models per upload, computes a soft-voting ensemble, and applies a multi-stage chest X-ray gate.
-    \item Document methodology, limitations, and reproducibility (manifest, seeds, and scripts).
+    \item Combine three public chest X-ray datasets into one 4-class list (manifest), remove duplicate images, and split the data by patient.
+    \item Build EfficientNetB3, DenseNet121 and a custom CNN, train them in the same way, and give the two transfer models the same classification head.
+    \item Train and test the models using precision, recall and F1 for each class, balanced accuracy, confusion matrices and a source-leakage probe.
+    \item Build a Flask app that runs every model on each upload, combines them with soft voting, and checks in several stages that the upload is a chest X-ray.
+    \item Document the method, its limitations and how to repeat it (manifest, seeds and scripts).
 \end{enumerate}
 
 \section{Organization of the Report}
 
-Chapter~2 reviews deep learning for chest X-ray analysis, transfer learning, multi-disease frameworks, deployment limits, and research gaps that motivate this work. Chapter~3 presents the methodology: unified manifest construction, honest splits, shared-head training, evaluation, and application integration. Chapter~4 describes system design---architecture layers, functional and non-functional requirements, the radiograph gate, user interface, and train/serve consistency. Chapter~5 discusses experimental setup, expected performance characteristics, comparative reporting templates, challenges, historical single-disease results (labelled as prior work), and implementation status. Chapter~6 concludes with recommendations, future enhancements, and contributions. Appendices summarise dataset details, model artefacts, and alignment with Sustainable Development Goals.
+\textbf{Chapter~2} reviews earlier work on deep learning for chest X-rays, transfer learning, multi-disease systems, deployment problems and the research gaps behind this project. \textbf{Chapter~3} explains the method: building the shared manifest, making fair splits, training with a shared head, evaluation and how the app is connected. \textbf{Chapter~4} covers system design: the software layers, functional and non-functional requirements, the X-ray check, the user interface and keeping training and app processing the same. \textbf{Chapter~5} covers the experimental setup, expected performance, comparison tables, challenges, earlier single-disease results (marked as prior work) and the current state of the implementation. \textbf{Chapter~6} gives the conclusion, recommendations, future work and contributions. The appendices give dataset details, model files and the link to the Sustainable Development Goals.

@@ -58,11 +58,12 @@
 \definecolor{TableKey}{RGB}{32, 56, 78}        % Project-in-Brief label col
 \definecolor{TableRule}{RGB}{170, 182, 194}
 
-\newcommand{\Head}[1]{\textcolor{TableHeadText}{\bfseries #1}}
-\newcommand{\HeaderRow}{\rowcolor{TableHead}}
-\newcommand{\ZebraRow}{\rowcolor{TableZebra}}
-\newcommand{\AccentRow}{\rowcolor{TableAccent}}
-\newcommand{\KeyCell}[1]{\cellcolor{TableKey}\textcolor{TableHeadText}{\bfseries #1}}
+% Plain style: bold black headers, no coloured fills or stripes
+\newcommand{\Head}[1]{{\bfseries #1}}
+\newcommand{\HeaderRow}{}
+\newcommand{\ZebraRow}{}
+\newcommand{\AccentRow}{}
+\newcommand{\KeyCell}[1]{{\bfseries #1}}
 
 % Comfortable cell padding for all tables
 \renewcommand{\arraystretch}{1.35}

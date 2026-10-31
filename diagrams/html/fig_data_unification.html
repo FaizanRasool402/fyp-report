@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#fff}
+body{font-family:Helvetica,Arial,sans-serif;color:#1a1a1a}
+.canvas{position:relative;width:960px;padding:20px}
+svg.wires{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.shape{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:1;flex:none}
+.shape>svg.bg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:-1}
+.lane .shape .t{font-size:16.5px}.lane .shape .s{font-size:14.5px}
+.shape .t{font-size:18px;font-weight:700;line-height:1.22}
+.shape .s{font-size:15.5px;color:#333;margin-top:3px;line-height:1.3}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.cap{font-size:15.5px;color:#333;text-align:center}
+.note{font-size:15px;color:#444;font-style:italic;line-height:1.4}
+.wlabel{position:absolute;font-size:15px;background:#fff;padding:0 4px;z-index:2;white-space:nowrap}
+ul.l{list-style:none;text-align:left;font-size:15.5px;line-height:1.5;margin-top:4px}
+ul.l li::before{content:"–";margin-right:6px;color:#666}
+.lane{border:1.5px solid #666;background:#fff;flex:none}
+.lane .hd{border-bottom:1.5px solid #666;text-align:center;padding:9px 6px}
+.lane .hd .n{font-size:19px;font-weight:700}
+.lane .hd .d{font-size:14.5px;font-style:italic;color:#333;margin-top:2px}
+.lane .bd{padding:16px 14px;display:flex;flex-direction:column;gap:20px;align-items:center}
+.lane .ft{text-align:center;font-size:14.5px;color:#333;padding:0 0 12px}
+</style></head>
+<body><div class="canvas">
+<div class="row" style="gap:62px">
+ <div class="col" style="gap:20px">
+  <div class="shape" id="d1" style="width:200px;height:92px;padding:18px 10px 4px;"><svg class="bg" viewBox="0 0 100 100" preserveAspectRatio="none" fill="#f5f5f5" stroke="#666666" stroke-width="1.6" stroke-linejoin="round"><path vector-effect="non-scaling-stroke" d="M0,12 C0,-4 100,-4 100,12 L100,88 C100,104 0,104 0,88 Z"/><path vector-effect="non-scaling-stroke" d="M0,12 C0,28 100,28 100,12" fill="none"/></svg><div class="t">TB CXR database</div></div>
+  <div class="shape" id="d2" style="width:200px;height:92px;padding:18px 10px 4px;"><svg class="bg" viewBox="0 0 100 100" preserveAspectRatio="none" fill="#f5f5f5" stroke="#666666" stroke-width="1.6" stroke-linejoin="round"><path vector-effect="non-scaling-stroke" d="M0,12 C0,-4 100,-4 100,12 L100,88 C100,104 0,104 0,88 Z"/><path vector-effect="non-scaling-stroke" d="M0,12 C0,28 100,28 100,12" fill="none"/></svg><div class="t">COVID-19 dataset</div></div>
+  <div class="shape" id="d3" style="width:200px;height:92px;padding:18px 10px 4px;"><svg class="bg" viewBox="0 0 100 100" preserveAspectRatio="none" fill="#f5f5f5" stroke="#666666" stroke-width="1.6" stroke-linejoin="round"><path vector-effect="non-scaling-stroke" d="M0,12 C0,-4 100,-4 100,12 L100,88 C100,104 0,104 0,88 Z"/><path vector-effect="non-scaling-stroke" d="M0,12 C0,28 100,28 100,12" fill="none"/></svg><div class="t">Pneumonia CXR dataset</div></div>
+ </div>
+ <div class="shape" id="m" style="width:180px;height:84px;padding:0 12px;"><svg class="bg" viewBox="0 0 180 84" preserveAspectRatio="none"><rect x="0.8" y="0.8" width="178.4" height="82.4" rx="8" ry="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.6"/></svg><div class="t">Merge + hash dedupe</div></div>
+ <div class="shape" id="sp" style="width:180px;height:84px;padding:0 12px;"><svg class="bg" viewBox="0 0 180 84" preserveAspectRatio="none"><rect x="0.8" y="0.8" width="178.4" height="82.4" rx="8" ry="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.6"/></svg><div class="t">Patient-grouped train/val/test</div></div>
+ <div class="col" style="gap:10px;align-items:center">
+  <div class="cap" style="font-size:14px;white-space:nowrap;visibility:hidden">x</div>
+  <div class="shape" id="mf" style="width:180px;height:92px;padding:0 12px 12px;"><svg class="bg" viewBox="0 0 100 100" preserveAspectRatio="none" fill="#d5e8d4" stroke="#82b366" stroke-width="1.6" stroke-linejoin="round"><path vector-effect="non-scaling-stroke" d="M0,0 H100 V86 C75,72 60,104 30,94 C18,90 8,88 0,92 Z"/></svg><div class="t">manifest.csv</div><div class="s">4 classes</div></div>
+  <div class="cap" style="font-size:14px;white-space:nowrap">Normal · TB · COVID-19 · Pneumonia</div>
+ </div>
+</div></div>
+<script>window.WIRES = [['d1','r','m','l'],['d2','r','m','l'],['d3','r','m','l'],['m','r','sp','l'],['sp','r','mf','l']];</script><script>
+function anchor(el, side, cv){
+  const r = el.getBoundingClientRect(), c = cv.getBoundingClientRect();
+  const x = r.left - c.left, y = r.top - c.top;
+  return {l:[x, y+r.height/2], r:[x+r.width, y+r.height/2],
+          t:[x+r.width/2, y], b:[x+r.width/2, y+r.height]}[side];
+}
+function wire(cv, svg, w){
+  const [a, as, b, bs, o={}] = w;
+  const A = anchor(document.getElementById(a), as, cv);
+  const B = anchor(document.getElementById(b), bs, cv);
+  const f = o.f ?? 0.5; let d;
+  const H = s => s==='l'||s==='r';
+  if (H(as) && H(bs)) { const xm = A[0] + (B[0]-A[0])*f; d = `M${A} H${xm} V${B[1]} H${B[0]}`; }
+  else if (!H(as) && !H(bs)) { const ym = A[1] + (B[1]-A[1])*f; d = `M${A} V${ym} H${B[0]} V${B[1]}`; }
+  else if (H(as)) d = `M${A} H${B[0]} V${B[1]}`;
+  else d = `M${A} V${B[1]} H${B[0]}`;
+  const col = o.color || '#333333';
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', d); p.setAttribute('fill','none'); p.setAttribute('stroke', col);
+  p.setAttribute('stroke-width', 1.8); p.setAttribute('stroke-linejoin','miter');
+  if (o.dash) p.setAttribute('stroke-dasharray','7 5');
+  p.setAttribute('marker-end', `url(#m-${o.mk||'d'})`);
+  svg.appendChild(p);
+  if (o.label){
+    const L = document.createElement('div'); L.className='wlabel'; L.textContent=o.label;
+    L.style.color = o.lcolor || '#333'; if (o.bold) L.style.fontWeight = 700; cv.appendChild(L);
+    const len = p.getTotalLength(), pt = p.getPointAtLength(len*(o.lt ?? 0.5));
+    L.style.left = (pt.x - L.offsetWidth/2 + (o.lx||0)) + 'px';
+    L.style.top = (pt.y - L.offsetHeight/2 + (o.ly||0)) + 'px';
+  }
+}
+window.addEventListener('load', () => {
+  const cv = document.querySelector('.canvas');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.classList.add('wires');
+  const mk = (id, c) => `<marker id="m-${id}" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 L2.5,5 z" fill="${c}"/></marker>`;
+  svg.innerHTML = '<defs>' + mk('d','#333333') + mk('r','#b85450') + mk('o','#d79b00') + '</defs>';
+  cv.prepend(svg);
+  (window.WIRES || []).forEach(w => wire(cv, svg, w));
+});
+</script></body></html>

@@ -1,84 +1,86 @@
 \chaptertitlepage{System Design}
 
-This chapter translates the methodology into a layered software system: presentation (HTML/CSS/Jinja), application (Flask routes), inference service (lazy loading, locking, ensemble), model artefacts (\texttt{weights/}), and an offline training pipeline under \texttt{training/}.
+This chapter shows how the method from \textbf{Chapter~3} was turned into working software. The system has five layers: the user interface (HTML/CSS/Jinja), the application (Flask routes), the prediction service (lazy loading, locking and the ensemble), the saved models (\texttt{weights/}), and an offline training pipeline in \texttt{training/}.
 
 \section{System Architecture}
 
-The inference path is layered as follows: user upload is received by Flask routes, validated by the chest X-ray gate, scored by \texttt{predict\_all()} in \texttt{predictors.py} across EfficientNetB3, DenseNet121, and the Custom CNN, then aggregated by soft-voting ensemble before the result page shows probability bars and agreement status.
+When a user uploads an image, a Flask route receives it and the chest X-ray check makes sure it is a valid X-ray. Then \texttt{predict\_all()} in \texttt{predictors.py} runs EfficientNetB3, DenseNet121 and the Custom CNN on it. Their outputs are combined with soft voting, and the result page shows the probability bars and whether the models agree.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{images/diagrams/system_architecture.png}
+\includegraphics[width=0.92\textwidth]{images/diagrams/fig_system_inference.png}
 \caption{High-level inference flow for the unified four-class web application}
 \label{fig:sys-arch-flow}
 \end{figure}
 
-Every upload is scored by every trained four-class model under the locked label order Normal, Tuberculosis, COVID-19, Pneumonia. Soft voting averages probability vectors. Legacy single-disease \texttt{.h5} files are refused if the output width is not four; missing weights are reported without crashing the server.
+Every trained four-class model scores every upload, always using the same label order: Normal, Tuberculosis, COVID-19, Pneumonia. Soft voting takes the average of the probability outputs. Old single-disease \texttt{.h5} files are rejected if they do not have four outputs, and if a weight file is missing the app reports it instead of crashing.
 
 \begin{table}[H]
 \centering
 \caption{Model integration overview}
 \label{tab:model-integration}
 \small
-\begin{tabular}{@{}llcc@{}}
-\toprule
+\begin{tabular}{|l|l|c|c|}
+\hline
 \HeaderRow \Head{Architecture} & \Head{Output} & \Head{Input} & \Head{Interface} \\
-\midrule
+\hline
 EfficientNetB3 & 4-class softmax & $256\times256$ & Flask ensemble \\
+\hline
 \ZebraRow DenseNet121 & 4-class softmax & $224\times224$ & Flask ensemble \\
+\hline
 Custom CNN & 4-class softmax & $150\times150$ & Flask ensemble \\
-\bottomrule
+\hline
 \end{tabular}
 \end{table}
 
 
 \section{Functional Requirements}
 
-\begin{itemize}
-    \item \textbf{FR1:} Accept PNG/JPG/JPEG uploads (maximum 16\,MB).
-    \item \textbf{FR2:} Validate likely chest radiographs; allow forced override with warning.
-    \item \textbf{FR3:} Run every available 4-class model on the same image.
-    \item \textbf{FR4:} Display per-class probabilities per model.
-    \item \textbf{FR5:} Compute and display soft-voting ensemble and agreement.
-    \item \textbf{FR6:} Show clear errors if weights are missing or have wrong output width.
-    \item \textbf{FR7:} Provide offline training scripts to rebuild weights from the manifest.
-\end{itemize}
+\begin{enumerate}
+    \item Accept PNG/JPG/JPEG uploads (maximum 16\,MB).
+    \item Check that the image is likely a chest X-ray; let the user override this, with a warning.
+    \item Run every available 4-class model on the same image.
+    \item Show the probability of each class for each model.
+    \item Calculate and show the soft-voting result and whether the models agree.
+    \item Show a clear error if weight files are missing or do not have four outputs.
+    \item Provide offline training scripts that can rebuild the weights from the manifest.
+\end{enumerate}
 
 \section{Non-Functional Requirements}
 
-\begin{itemize}
-    \item \textbf{NFR1 Reproducibility:} Fixed seed and committed manifest policy.
-    \item \textbf{NFR2 Usability:} Single upload; no model picker required.
-    \item \textbf{NFR3 Robustness:} Multi-stage rejection of non-X-ray uploads.
-    \item \textbf{NFR4 Consistency:} Train/serve preprocessing alignment.
-    \item \textbf{NFR5 Maintainability:} Shared \texttt{CLASSES} order in \texttt{training/common.py}.
-    \item \textbf{NFR6 Safety messaging:} Explicit research-only / non-clinical disclaimer.
+\begin{itemize}[label={}, leftmargin=0pt]
+    \item \textbf{Reproducibility:} A fixed seed and a saved manifest, so results can be repeated.
+    \item \textbf{Usability:} One upload is enough; the user does not have to pick a model.
+    \item \textbf{Robustness:} Images that are not X-rays are rejected in several stages.
+    \item \textbf{Consistency:} The app processes images the same way as training.
+    \item \textbf{Maintainability:} The class order (\texttt{CLASSES}) is defined once in \texttt{training/common.py}.
+    \item \textbf{Safety messaging:} A clear note that the tool is for research only and not for clinical use.
 \end{itemize}
 
 \section{Tools and Technologies Used}
 
-Python (3.9+/3.11 recommended for modern TensorFlow), TensorFlow and Keras, OpenCV, Flask and Werkzeug, NumPy, scikit-learn (evaluation), Matplotlib and Seaborn (figures), HTML/CSS, and Git. Training prefers a capable GPU machine; CPU inference is possible but slower. Key folders: \path{training/}, \path{Frontend/}, \path{weights/}, and the three public dataset trees documented in Chapter~3.
+We used Python (3.9 or newer; 3.11 is recommended for recent TensorFlow), TensorFlow and Keras, OpenCV, Flask and Werkzeug, NumPy, scikit-learn (for evaluation), Matplotlib and Seaborn (for figures), HTML/CSS and Git. Training is best done on a machine with a good GPU. Prediction can run on a CPU, but it is slower. The main folders are \path{training/}, \path{Frontend/}, \path{weights/} and the three public dataset folders described in \textbf{Chapter~3}.
 
 \section{Chest X-Ray Validation Gate}
 
 \begin{enumerate}
-    \item \textbf{Monochrome/tint:} grayscale or single-tint films (blue-tinted displays allowed).
-    \item \textbf{Radiograph envelope:} intensity, entropy, midtones, aspect, symmetry, and related statistics; one violation forgiven.
-    \item \textbf{Anatomy veto:} reject only if both bright central-column cues and bilateral symmetry cues are absent.
+    \item \textbf{Monochrome or tint check:} the image must be grayscale or have a single colour tint (blue-tinted screens are allowed).
+    \item \textbf{Radiograph envelope:} the image's brightness, entropy, midtones, shape, symmetry and similar measures must fall in the normal X-ray range; one measure is allowed to fail.
+    \item \textbf{Anatomy check:} the image is rejected only if there is no bright central column (the spine) and no left--right symmetry.
 \end{enumerate}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{images/diagrams/xray_gate_pipeline.png}
+\includegraphics[width=0.92\textwidth]{images/diagrams/fig_xray_gate.png}
 \caption{Three-stage chest X-ray validation gate with optional forced analysis}
 \label{fig:xray-gate}
 \end{figure}
 
-On a labelled set of 351 real radiographs versus 106 non-X-rays, the gate accepted 100\% of real films and rejected approximately 77\% of non-X-rays (previous monochrome-only gate $\sim$21\%). Rejection reasons are shown; Analyse anyway is protected against path traversal.
+We tested the check on a labelled set of 351 real X-rays and 106 images that were not X-rays. It accepted all of the real X-rays (100\%) and rejected about 77\% of the non-X-rays, compared with about 21\% for the old check that only looked at whether the image was monochrome. The user is told why an image was rejected, and the ``Analyse anyway'' option is protected against path traversal.
 
 \section{Application Flow and User Interface}
 
-Home lists model readiness; the upload form accepts a radiograph; results show probability bars, class blurbs, ensemble verdict, agreement, and a forced-analysis warning when used. Figures~\ref{fig:web-upload-ui} and~\ref{fig:web-validation} show upload and rejection UI; Chapter~5 presents consensus result screenshots for TB, COVID-19, and pneumonia demos.
+The home page shows which models are loaded and ready. The user uploads an X-ray through a simple form. The result page shows the probability bars, a short note about each class, the ensemble verdict, whether the models agree, and a warning if the user chose ``Analyse anyway''. Figures~\ref{fig:web-upload-ui} and~\ref{fig:web-validation} show the upload page and the rejection message. \textbf{Chapter~5} shows screenshots of the results for TB, COVID-19 and pneumonia examples.
 
 \begin{figure}[H]
 \centering
@@ -99,22 +101,25 @@ Home lists model readiness; the upload form accepts a radiograph; results show p
 \caption{Flask application components}
 \label{tab:flask-components}
 \small
-\begin{tabular}{@{}P{2.4cm}P{4.0cm}P{5.5cm}@{}}
-\toprule
+\begin{tabular}{|P{2.4cm}|P{4.0cm}|P{5.5cm}|}
+\hline
 \HeaderRow \Head{Component} & \Head{Location} & \Head{Purpose} \\
-\midrule
+\hline
 Web Framework & Flask & Routes and templates \\
+\hline
 \ZebraRow Inference & \path{Frontend/predictors.py} & Gate, lazy load, ensemble \\
+\hline
 Shared constants & \texttt{training/common.py} & Class order, preprocess \\
+\hline
 \ZebraRow Weights & \texttt{weights/*.keras} & 4-class models \\
-\bottomrule
+\hline
 \end{tabular}
 \end{table}
 
 \section{Train/Serve Consistency}
 
-Inference mirrors training decode with bilinear resize and the same \texttt{preprocess\_input} or $/255$ rescale. The \texttt{CLASSES} index order is shared across training, evaluation, and the UI. Non-four-class weight files are refused.
+The app reads images exactly as training does, with bilinear resizing and the same \texttt{preprocess\_input} or division by 255. Training, evaluation and the user interface all use the same \texttt{CLASSES} order. Weight files that do not have four outputs are refused.
 
 \section{Summary}
 
-System design realises the methodology as a usable research demo: safer upload gating, always-on multi-model scoring, soft-voting consensus, and preprocessing consistency between notebooks and the live application.
+The system design turns the method into a research demo that people can actually use. It checks uploads more safely, always runs all the models, combines them with soft voting, and processes images in the app exactly as they were processed during training.

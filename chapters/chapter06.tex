@@ -2,35 +2,35 @@
 
 \section{Conclusion}
 
-This project achieved its aim of a research-grade chest X-ray multi-disease classification system that benchmarks EfficientNetB3, DenseNet121, and a custom CNN on a unified four-class dataset (Normal, Tuberculosis, COVID-19, Pneumonia) and deploys them through an ensemble-capable Flask application. On the held-out test set ($n=482$), DenseNet121 was the strongest single model (90.87\% accuracy; 89.14\% balanced accuracy), and soft-voting ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy. Shared manifests, patient-grouped splits, content-hash deduplication, matched fine-tuning fractions, per-class metrics, and a leakage probe (88.17\% vs 49.79\% baseline) authenticate comparative claims. The system remains a research demonstration on public data and is not a clinical diagnostic device.
+This project met its aim. We built a research chest X-ray system for several diseases that compares EfficientNetB3, DenseNet121 and a custom CNN on one shared four-class dataset (Normal, Tuberculosis, COVID-19, Pneumonia), and we made the models available through a Flask app that combines their results. On the held-out test set ($n=482$), DenseNet121 was the best single model (90.87\% accuracy, 89.14\% balanced accuracy), and the soft-voting ensemble reached 92.32\% accuracy and 93.07\% balanced accuracy. The comparison can be trusted because of the shared manifest, patient-grouped splits, removal of duplicate images, the same fine-tuning share for each model, per-class metrics and the leakage probe (88.17\% against a 49.79\% baseline). The system is still a research demo built on public data and is not a clinical diagnostic device.
 
 \section{Recommendations}
 
 \begin{itemize}
-    \item Always report per-class recall for minority diseases such as COVID-19.
-    \item Keep patient-grouped splits in any dataset extension.
-    \item Do not compare old binary metrics to four-class metrics without clear historical labelling.
-    \item Use the leakage probe whenever heterogeneous public sets are merged.
+    \item Always report recall for each class, especially for small classes such as COVID-19.
+    \item Keep splitting by patient whenever new data is added.
+    \item Do not compare the old two-class results with the four-class results unless they are clearly marked as older work.
+    \item Run the leakage probe whenever different public datasets are merged.
 \end{itemize}
 
 \section{Future Enhancements}
 
 \begin{itemize}
-    \item Additional verified COVID data and multi-centre validation.
-    \item Grad-CAM or related explainability overlays.
-    \item DICOM support and PACS-oriented integration paths.
-    \item Calibration (e.g., temperature scaling) and per-class decision thresholds.
-    \item Active learning or semi-supervised expansion.
-    \item Mobile/cloud deployment with authentication and audit logs.
-    \item Optional additional backbones (e.g., VGG19) under the same harness.
+    \item More verified COVID data, and testing on data from several hospitals.
+    \item Grad-CAM or similar heatmaps to show what the model is looking at.
+    \item Support for DICOM files and a way to connect with hospital PACS systems.
+    \item Calibrating the probabilities (for example with temperature scaling) and setting a separate decision threshold for each class.
+    \item Using active learning or semi-supervised learning to grow the dataset.
+    \item A mobile or cloud version with user login and audit logs.
+    \item Adding more backbones (for example VGG19) using the same training setup.
 \end{itemize}
 
 \section{Summary of Contributions}
 
 \begin{enumerate}
-    \item A unified four-class CXR benchmark from three public sources with leakage controls.
-    \item A fair three-architecture training harness (shared head; matched fine-tune fraction).
-    \item An evaluation suite with precision/recall/F1, balanced accuracy, ensemble scoring, and a leakage probe.
-    \item A Flask multi-model demo with soft voting, agreement display, and a measured X-ray gate.
-    \item Documentation enabling reproducibility (manifest, scripts, and status notes).
+    \item A shared four-class chest X-ray dataset built from three public sources, with controls against leakage.
+    \item A fair training setup for three architectures (the same head and the same share of fine-tuning).
+    \item Evaluation scripts that report precision, recall, F1, balanced accuracy, ensemble results and a leakage probe.
+    \item A Flask demo that runs all models, combines them with soft voting, shows whether they agree, and checks uploads with a tested X-ray check.
+    \item Documentation that lets others repeat the work (manifest, scripts and status notes).
 \end{enumerate}
